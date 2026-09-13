@@ -2,8 +2,8 @@
   "use strict";
 
   const ROOT="https://www-infinity4.github.io/";
-  const CHANNEL_SOURCE=`${ROOT}Control-Phi/channels.json?v=20260913b`;
-  const NON_TV=new Set(["News-Phi","Control-Phi"]);
+  const CHANNEL_SOURCE=`${ROOT}Control-Phi/channels.json?v=20260913-omnitune2`;
+  const NON_TV=new Set(["News-Phi","Control-Phi","Omni-TV"]);
   const $=id=>document.getElementById(id);
   const els={
     frame:$("stationFrame"),grid:$("channelGrid"),clock:$("clock"),networkState:$("networkState"),
@@ -16,7 +16,9 @@
   let selectedIndex=-1;
   let selected=null;
   let stationPoll=null;
+  let readinessPoll=null;
   let loadTimer=null;
+  let tuneGeneration=0;
   const liveState=new Map();
 
   const clean=value=>String(value==null?"":value).replace(/\s+/g," ").trim();
@@ -87,8 +89,8 @@
   }
 
   function applyFilter(){
-    const term=clean(els.search.value).toLowerCase();
-    els.grid.querySelectorAll(".channel-card").forEach(card=>{card.hidden=!!term&&!card.dataset.search.includes(term)});
+    const term=clean(els.search?.value).toLowerCase();
+    els.grid?.querySelectorAll(".channel-card").forEach(card=>{card.hidden=!!term&&!card.dataset.search.includes(term)});
   }
 
   function pageImage(doc){
@@ -113,6 +115,15 @@
 
   function playerShell(doc){
     return doc.querySelector(".screen-shell")||doc.querySelector(".player-shell")||doc.querySelector("#player")?.parentElement||doc.querySelector(".player")?.parentElement;
+  }
+
+  function stationDocument(){
+    try{return els.frame.contentDocument||els.frame.contentWindow?.document||null}catch(_){return null}
+  }
+
+  function setTuning(active,text=""){
+    if(els.loading)els.loading.hidden=!active;
+    if(active&&els.loadingChannel&&text)els.loadingChannel.textContent=text;
   }
 
   function isolatePlayer(doc,{activate=false}={}){
@@ -156,8 +167,8 @@
   function syncSelectedInfo(){
     if(!selected)return;
     try{
-      const doc=els.frame.contentDocument;
-      if(!doc)return;
+      const doc=stationDocument();
+      if(!doc||!doc.body)return;
       const title=liveTitle(doc);
       const previous=liveState.get(selected.slug)||{};
       const next={...previous,title:title||previous.title||"",image:previous.image||pageImage(doc),meta:liveMeta(doc)};
@@ -171,12 +182,49 @@
   function configureLoadedStation(activate=false){
     if(!selected)return false;
     try{
-      const doc=els.frame.contentDocument;
-      if(!doc)return false;
+      const doc=stationDocument();
+      if(!doc||!doc.body)return false;
       const isolated=isolatePlayer(doc,{activate});
       syncSelectedInfo();
       return isolated;
     }catch(_){return false}
+  }
+
+  function markStationReady(generation,reason){
+    if(generation!==tuneGeneration||!selected)return false;
+    const doc=stationDocument();
+    if(!doc||!doc.body)return false;
+    const shell=playerShell(doc);
+    const usable=!!shell||doc.readyState==="interactive"||doc.readyState==="complete";
+    if(!usable)return false;
+
+    clearTimeout(loadTimer);
+    setTuning(false);
+    const isolated=configureLoadedStation(false);
+    els.status.textContent=isolated
+      ? `${selected.name} is in the Omni TV screen. Tap Enter live to start playback.`
+      : `${selected.name} is connected. Tap Enter live to start playback.`;
+    if(els.wake){els.wake.disabled=false;els.wake.textContent=`Enter ${selected.name}`;}
+    return true;
+  }
+
+  function watchStationReadiness(generation){
+    if(readinessPoll)clearInterval(readinessPoll);
+    let checks=0;
+    readinessPoll=setInterval(()=>{
+      checks++;
+      if(generation!==tuneGeneration){clearInterval(readinessPoll);readinessPoll=null;return;}
+      if(markStationReady(generation,"poll")){clearInterval(readinessPoll);readinessPoll=null;return;}
+      if(checks>=80){
+        clearInterval(readinessPoll);readinessPoll=null;
+        setTuning(false);
+        if(selected){
+          els.nowTitle.textContent=`${selected.name} selected`;
+          els.nowMeta.textContent="The station page did not expose its player yet.";
+          els.status.textContent="Tap Enter live. If the station source is unavailable, Open station will show its own status.";
+        }
+      }
+    },125);
   }
 
   function selectChannel(index){
@@ -184,44 +232,66 @@
     index=(index+channels.length)%channels.length;
     selectedIndex=index;
     selected=channels[index];
-    els.idle.hidden=true;
-    els.loading.hidden=false;
-    els.loadingChannel.textContent=`Tuning ${selected.name}…`;
+    tuneGeneration++;
+    const generation=tuneGeneration;
+
+    if(els.idle)els.idle.hidden=true;
+    setTuning(true,`Tuning ${selected.name}…`);
     els.channelLabel.textContent=`LIVE · ${selected.name}`;
     els.nowTitle.textContent=(liveState.get(selected.slug)||{}).title||`Joining ${selected.name}`;
-    els.nowMeta.textContent="Loading the station at its current synchronized position.";
+    els.nowMeta.textContent="Connecting to the station at its current synchronized position.";
     els.open.disabled=false;
-    els.wake.disabled=false;
+    els.wake.disabled=true;
+    els.wake.textContent="Connecting…";
     els.status.textContent="";
+
     clearTimeout(loadTimer);
     loadTimer=setTimeout(()=>{
-      if(!els.loading.hidden)els.status.textContent="This station is taking longer to load. Tap Enter live or Open station.";
-    },9000);
-    els.frame.src=`${selected.url}${selected.url.includes("?")?"&":"?"}omni=1&t=${Date.now()}`;
+      if(generation!==tuneGeneration)return;
+      setTuning(false);
+      els.wake.disabled=false;
+      els.wake.textContent=`Enter ${selected.name}`;
+      els.status.textContent="Station page is still initializing. Tap Enter live to retry the player connection.";
+    },6500);
+
+    els.frame.src=`${selected.url}${selected.url.includes("?")?"&":"?"}omni=1`;
     history.replaceState(null,"",`#${encodeURIComponent(selected.slug)}`);
     renderGrid();
+    watchStationReadiness(generation);
+
     if(stationPoll)clearInterval(stationPoll);
-    stationPoll=setInterval(syncSelectedInfo,1500);
+    stationPoll=setInterval(()=>{
+      if(generation!==tuneGeneration)return;
+      syncSelectedInfo();
+      if(els.loading&&!els.loading.hidden)markStationReady(generation,"info-poll");
+    },1000);
   }
 
   function wakeSelected(){
     if(!selected)return;
-    const isolated=configureLoadedStation(true);
+    setTuning(false);
+    const doc=stationDocument();
+    const enter=doc?enterButton(doc):null;
+    let activated=false;
+    if(enter&&typeof enter.click==="function"){
+      try{enter.click();activated=true;}catch(_){ }
+    }
+    const isolated=doc?isolatePlayer(doc,{activate:false}):false;
     try{
-      const doc=els.frame.contentDocument;
       const iframe=doc?.querySelector("#player iframe,.player iframe,iframe[src*='youtube.com/embed']");
       if(iframe&&typeof iframe.focus==="function")iframe.focus();
     }catch(_){ }
-    els.status.textContent=isolated?`${selected.name} is joined live.`:"Tap the video once if this station requires a playback gesture.";
+    els.status.textContent=(activated||isolated)
+      ? `${selected.name} is joined live.`
+      : `${selected.name} is selected. Tap the video once if Android requires the playback gesture.`;
   }
 
   els.frame.addEventListener("load",()=>{
     if(!selected)return;
-    clearTimeout(loadTimer);
-    els.loading.hidden=true;
-    const first=configureLoadedStation(false);
-    els.status.textContent=first?`${selected.name} is in the Omni TV screen. Tap Enter live if playback has not started.`:`${selected.name} loaded. Tap Enter live.`;
-    setTimeout(()=>configureLoadedStation(false),500);
+    const generation=tuneGeneration;
+    markStationReady(generation,"load");
+    setTimeout(()=>markStationReady(generation,"load-250"),250);
+    setTimeout(()=>markStationReady(generation,"load-900"),900);
     setTimeout(()=>configureLoadedStation(false),1600);
   });
 
