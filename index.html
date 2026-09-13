@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#05070b">
   <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Omni TV — Surf the Infinity TV Network Live</title>
   <meta name="description" content="Omni TV puts the Infinity TV network on one screen. Pick a live channel and watch its current synchronized program without leaving Omni TV.">
   <link rel="canonical" href="https://www-infinity4.github.io/Omni-TV/">
@@ -20,7 +23,7 @@
   <meta name="twitter:title" content="Omni TV — Live Network Surfer">
   <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
   <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
-  <link rel="stylesheet" href="styles.css?v=20260913-omnitune2">
+  <link rel="stylesheet" href="styles.css?v=20260913-omnifix4">
   <style>
     .topbar .channel-menu{position:relative;flex:0 0 auto}
     .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:20px;font-weight:900}
@@ -28,15 +31,16 @@
     .topbar .channel-menu>nav{position:absolute;right:0;top:calc(100% + 8px);z-index:300;width:min(330px,90vw);max-height:72vh;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#070b12;box-shadow:0 22px 70px rgba(0,0,0,.65)}
     .topbar .channel-menu>nav a{display:block;padding:10px 11px;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;text-decoration:none;font-weight:800}
     .topbar .channel-menu>nav a[href*="/Omni-TV/"]{outline:2px solid #7dd3fc;background:rgba(125,211,252,.12)}
+    .topbar .channel-menu>nav .remote-error{padding:10px 11px;color:#fca5a5;font-weight:800}
     @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{width:40px;height:40px}}
   </style>
 </head>
-<body>
+<body data-omni-build="20260913-omnifix4">
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
     <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
     <time id="clock">--:-- local</time>
-    <details class="channel-menu" data-channel-menu><summary aria-label="Open shared channel remote">☰</summary><nav aria-label="Switch channels"></nav></details>
+    <details class="channel-menu" data-channel-menu><summary aria-label="Open shared channel remote">☰</summary><nav aria-label="Switch channels"><span class="remote-error">Loading channels…</span></nav></details>
   </header>
 
   <main id="top">
@@ -85,7 +89,55 @@
 
   <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
 
-  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913-news2" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js?v=20260913-news2'"></script>
-  <script src="app.js?v=20260913-omnitune2"></script>
+  <script>
+    (function omniRegistryHotfix(){
+      const nativeFetch=window.fetch.bind(window);
+      window.fetch=function(input,init){
+        try{
+          const raw=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+          if(/\/Control-Phi\/channels\.json(?:[?#]|$)/i.test(raw)){
+            const url=new URL(raw,location.href);
+            url.searchParams.set('_omni',Date.now().toString());
+            if(input instanceof Request)input=new Request(url.href,input);else input=url.href;
+          }
+        }catch(_){ }
+        return nativeFetch(input,init);
+      };
+    })();
+  </script>
+  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913-omnifix4" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js?v=20260913-omnifix4'"></script>
+  <script>
+    (function omniRemoteFallback(){
+      const ROOT='https://www-infinity4.github.io/';
+      const menu=document.querySelector('details[data-channel-menu]');
+      const nav=menu?.querySelector('nav');
+      if(!menu||!nav)return;
+      let lastSignature='';
+      const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      async function refresh(){
+        try{
+          const response=await fetch(`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,{cache:'no-store'});
+          if(!response.ok)throw new Error(String(response.status));
+          const data=await response.json();
+          const channels=Array.isArray(data?.channels)?data.channels:[];
+          const signature=JSON.stringify(channels.map(item=>[item.name,item.path]));
+          if(signature===lastSignature)return;
+          lastSignature=signature;
+          nav.innerHTML=channels.map(item=>{
+            const path=encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/');
+            return `<a href="${ROOT}${path}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`;
+          }).join('');
+          menu.dataset.controlPhi='connected';
+        }catch(error){
+          if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">Channel remote could not refresh. Tap again after reconnecting.</span>';
+        }
+      }
+      refresh();
+      window.addEventListener('focus',refresh);
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+      setInterval(refresh,60000);
+    })();
+  </script>
+  <script src="app.js?v=20260913-omnifix4"></script>
 </body>
 </html>
