@@ -20,13 +20,23 @@
   <meta name="twitter:title" content="Omni TV — Live Network Surfer">
   <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
   <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
-  <link rel="stylesheet" href="styles.css?v=20260913b">
+  <link rel="stylesheet" href="styles.css?v=20260913c">
+  <style>
+    .topbar .channel-menu{position:relative;flex:0 0 auto}
+    .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:20px;font-weight:900}
+    .topbar .channel-menu>summary::-webkit-details-marker{display:none}
+    .topbar .channel-menu>nav{position:absolute;right:0;top:calc(100% + 8px);z-index:300;width:min(330px,90vw);max-height:72vh;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#070b12;box-shadow:0 22px 70px rgba(0,0,0,.65)}
+    .topbar .channel-menu>nav a{display:block;padding:10px 11px;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;text-decoration:none;font-weight:800}
+    .topbar .channel-menu>nav a[href*="/Omni-TV/"]{outline:2px solid #7dd3fc;background:rgba(125,211,252,.12)}
+    @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{width:40px;height:40px}}
+  </style>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
     <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
     <time id="clock">--:-- local</time>
+    <details class="channel-menu" data-channel-menu><summary aria-label="Open shared channel remote">☰</summary><nav aria-label="Switch channels"></nav></details>
   </header>
 
   <main id="top">
@@ -75,7 +85,7 @@
 
   <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
 
-  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913b" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js?v=20260913b'"></script>
-  <script src="app.js?v=20260913b"></script>
+  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913-news2" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js?v=20260913-news2'"></script>
+  <script src="app.js?v=20260913c"></script>
 </body>
 </html>
