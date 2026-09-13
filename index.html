@@ -23,7 +23,7 @@
   <meta name="twitter:title" content="Omni TV — Live Network Surfer">
   <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
   <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
-  <link rel="stylesheet" href="styles.css?v=20260913-omnifix4">
+  <link rel="stylesheet" href="styles.css?v=20260913-omnifix5">
   <style>
     .topbar .channel-menu{position:relative;flex:0 0 auto}
     .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:20px;font-weight:900}
@@ -35,7 +35,7 @@
     @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{width:40px;height:40px}}
   </style>
 </head>
-<body data-omni-build="20260913-omnifix4">
+<body data-omni-build="20260913-omnifix5">
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
     <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
@@ -90,6 +90,11 @@
   <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
 
   <script>
+    window.INFINITY_CHANNELS=[
+      {name:'Hydrogen Digital TV',path:'Hydrogen-Digital-TV'},{name:'Omni TV',path:'Omni-TV'},{name:'Hermit TV',path:'Hermit-TV'},{name:'Star Launcher',path:'Star-Launcher'},{name:'HBO',path:'HBO'},{name:'Starz',path:'Starz'},{name:'Cinemax',path:'Cinemax'},{name:'Showtime',path:'Showtime'},{name:'Encore',path:'Encore'},{name:'Cartoon Network',path:'Cartoon-Network'},{name:'WGN',path:'WGN'},{name:'TNT',path:'TNT'},{name:'NBC',path:'NBC'},{name:'FOX',path:'FOX'},{name:'FX',path:'FX'},{name:'Nickelodeon',path:'Nickelodeon'},{name:'FSN',path:'FSN'},{name:'ESPN',path:'ESPN'},{name:'MTV',path:'MTV'},{name:'VH1',path:'VH1'},{name:'AMC',path:'AMC'},{name:'Disney',path:'Disney'},{name:'USA',path:'USA'},{name:'Comedy Central',path:'Comedy-Central'},{name:'BET',path:'BET'},{name:'Discovery',path:'Discovery'},{name:'Nintendo TV',path:'Nintendo-TV'},{name:'Chiller',path:'Chiller'},{name:'TBS',path:'TBS'},{name:'ABC',path:'ABC'},{name:'CBS',path:'CBS'},{name:'PBS',path:'PBS'},{name:'History Channel',path:'History-Channel'},{name:'CNN',path:'CNN'},{name:'Trump TV',path:'Trump-TV'},{name:'ShopLC',path:'ShopLC'},{name:'Ozzy TV',path:'Ozzy-TV'},{name:'CCR TV',path:'CCR-TV'},{name:'Motor TV',path:'Motor-TV'},{name:'Physics TV',path:'Physics-TV'},{name:'Adventure TV',path:'Adventure-TV'},{name:'Trigger TV',path:'Trigger-TV'},{name:'Time Surfers',path:'Time-Surfers'},{name:'Syncord',path:'Syncord'},{name:'Astraflix',path:'Astraflix'},{name:'Vintech',path:'Vintech'},{name:'Flix Blender',path:'Flix-Blender'},{name:'Abstractia',path:'Abstractia-'},{name:'Animasync',path:'Animasync'},{name:'SeekSync',path:'SeekSync'},{name:'Azyryth',path:'Azyryth'},{name:'PowerSync',path:'PowerSync'},{name:'HyperSync',path:'HyperSync'},{name:'AIsync',path:'AIsync'},{name:'News Phi',path:'News-Phi'}
+    ];
+  </script>
+  <script>
     (function omniRegistryHotfix(){
       const nativeFetch=window.fetch.bind(window);
       window.fetch=function(input,init){
@@ -105,32 +110,43 @@
       };
     })();
   </script>
-  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913-omnifix4" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js?v=20260913-omnifix4'"></script>
+  <script src="https://cdn.jsdelivr.net/gh/www-infinity4/Control-Phi@main/control-phi.js?v=20260913-omnifix5" onerror="this.onerror=null;this.remove()"></script>
   <script>
     (function omniRemoteFallback(){
       const ROOT='https://www-infinity4.github.io/';
+      const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
       const menu=document.querySelector('details[data-channel-menu]');
       const nav=menu?.querySelector('nav');
       if(!menu||!nav)return;
       let lastSignature='';
       const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      async function refresh(){
-        try{
-          const response=await fetch(`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,{cache:'no-store'});
-          if(!response.ok)throw new Error(String(response.status));
-          const data=await response.json();
-          const channels=Array.isArray(data?.channels)?data.channels:[];
-          const signature=JSON.stringify(channels.map(item=>[item.name,item.path]));
-          if(signature===lastSignature)return;
-          lastSignature=signature;
-          nav.innerHTML=channels.map(item=>{
-            const path=encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/');
-            return `<a href="${ROOT}${path}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`;
-          }).join('');
-          menu.dataset.controlPhi='connected';
-        }catch(error){
-          if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">Channel remote could not refresh. Tap again after reconnecting.</span>';
+      function render(channels){
+        const signature=JSON.stringify(channels.map(item=>[item.name,item.path]));
+        if(signature===lastSignature)return;
+        lastSignature=signature;
+        nav.innerHTML=channels.map(item=>{
+          const path=encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/');
+          return `<a href="${ROOT}${path}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`;
+        }).join('');
+        menu.dataset.controlPhi='connected';
+      }
+      async function loadRegistry(){
+        const sources=[`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,`${RAW}?_remote=${Date.now()}`];
+        for(const source of sources){
+          try{
+            const response=await fetch(source,{cache:'no-store'});
+            if(!response.ok)continue;
+            const data=await response.json();
+            const channels=Array.isArray(data?.channels)?data.channels:[];
+            if(channels.length)return channels;
+          }catch(_){ }
         }
+        return Array.isArray(window.INFINITY_CHANNELS)?window.INFINITY_CHANNELS:[];
+      }
+      async function refresh(){
+        const channels=await loadRegistry();
+        if(channels.length)render(channels);
+        else if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">No channel list is available.</span>';
       }
       refresh();
       window.addEventListener('focus',refresh);
@@ -138,6 +154,6 @@
       setInterval(refresh,60000);
     })();
   </script>
-  <script src="app.js?v=20260913-omnifix4"></script>
+  <script src="app.js?v=20260913-omnifix5"></script>
 </body>
 </html>
