@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#05070b">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Omni TV — Surf the Infinity TV Network Live</title>
+  <meta name="description" content="Omni TV puts the Infinity TV network on one screen. Pick a live channel and watch its current synchronized program without leaving Omni TV.">
+  <link rel="canonical" href="https://www-infinity4.github.io/Omni-TV/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Omni TV">
+  <meta property="og:title" content="Omni TV — Every Live Channel on One Screen">
+  <meta property="og:description" content="Flip through the Infinity TV network and join each station at the exact program position airing now.">
+  <meta property="og:url" content="https://www-infinity4.github.io/Omni-TV/">
+  <meta property="og:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Omni TV — Live Network Surfer">
+  <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
+  <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
+  <link rel="stylesheet" href="styles.css?v=20260913a">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
+    <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
+    <time id="clock">--:-- local</time>
+  </header>
+
+  <main id="top">
+    <section class="watch" aria-labelledby="nowTitle">
+      <div class="now-head">
+        <div>
+          <p id="channelLabel">OMNI TV</p>
+          <h1 id="nowTitle">Choose a live channel</h1>
+          <span id="nowMeta">The station stays synchronized to its own schedule.</span>
+        </div>
+        <div class="head-actions">
+          <button id="openStation" type="button" disabled>Open station</button>
+          <button id="shareButton" type="button">Share</button>
+        </div>
+      </div>
+
+      <div class="screen-shell" id="screenShell">
+        <iframe id="stationFrame" title="Omni TV live station player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <div id="idleCard" class="idle-card">
+          <span>OMNI TV</span>
+          <strong>Surf the network below</strong>
+          <small>Tap a station to pipe its current live program into this screen.</small>
+        </div>
+        <div id="loadingCard" class="loading-card" hidden>
+          <span id="loadingChannel">Tuning…</span>
+          <strong>Joining the live station clock</strong>
+        </div>
+      </div>
+
+      <div class="surf-controls" aria-label="Channel controls">
+        <button id="prevChannel" type="button" aria-label="Previous channel">◀ CH−</button>
+        <button id="wakeChannel" type="button" disabled>Enter live</button>
+        <button id="nextChannel" type="button" aria-label="Next channel">CH+ ▶</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="network" aria-labelledby="networkHeading">
+      <div class="network-heading">
+        <div><p>LIVE REMOTE</p><h2 id="networkHeading">What’s on across the network</h2></div>
+        <label class="search"><span>Find</span><input id="channelSearch" type="search" placeholder="Channel or program" autocomplete="off"></label>
+      </div>
+      <div id="channelGrid" class="channel-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <iframe id="probeFrame" class="probe-frame" title="Live schedule checker" tabindex="-1" aria-hidden="true"></iframe>
+
+  <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
+
+  <script src="https://www-infinity4.github.io/TNT/channels-core.js?v=20260913-priority"></script>
+  <script src="app.js?v=20260913a"></script>
+</body>
+</html>
