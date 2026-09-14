@@ -1,5 +1,25 @@
 (function(){
   'use strict';
+
+  function stabilizeSelector(){
+    const sort=document.getElementById('sortMode');
+    if(!sort)return;
+    const unstable=sort.querySelector('option[value="top"]');
+    if(unstable)unstable.remove();
+    if(sort.value!=='network')sort.value='network';
+  }
+
+  // This script loads before app-stable.js. Force a deterministic network order
+  // before the Omni selector starts so tuning a destination cannot reshuffle CH+/CH-.
+  stabilizeSelector();
+  window.addEventListener('pageshow',()=>{
+    const sort=document.getElementById('sortMode');
+    if(!sort)return;
+    const changed=sort.value!=='network';
+    stabilizeSelector();
+    if(changed)sort.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+
   function guard(frame){
     if(!frame||frame.dataset.omniGuarded==='1')return;
     frame.dataset.omniGuarded='1';
@@ -24,6 +44,7 @@
       }catch(_){ }
     });
   }
+
   const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
     if(!(node instanceof Element))return;
     if(node.matches('iframe.probe-frame'))guard(node);
