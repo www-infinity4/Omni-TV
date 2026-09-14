@@ -6,6 +6,7 @@
   const CACHE_KEY='omni:guide:v7';
   const RATING_KEY='omni:viewer-ratings:v1';
   const CACHE_MS=5*60*1000;
+  const SELF_SLUG='omni-tv';
   const $=id=>document.getElementById(id);
   const els={
     shell:$('screenShell'),frame:$('stationFrame'),grid:$('channelGrid'),clock:$('clock'),networkState:$('networkState'),
@@ -15,7 +16,7 @@
   };
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const safeUrl=(v,base=location.href)=>{try{const u=new URL(v,base);return /^https?:$/.test(u.protocol)?u.href:''}catch{return ''}};
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
   let channels=[],viewChannels=[],selected=null,tuneId=0,stationPoll=0,selectedStartedAt=0;
   let activeType='all';
@@ -39,7 +40,7 @@
   }
   function normalize(item,order){
     if(!item)return null;if(typeof item==='string')item={name:item,path:item};
-    const slug=slugOf(item);if(!slug)return null;
+    const slug=slugOf(item);if(!slug||slug.toLowerCase()===SELF_SLUG)return null;
     const type=normalizeType(item.type,slug);
     const genres=[...new Set((Array.isArray(item.genres)?item.genres:[]).map(v=>clean(v).toLowerCase()).filter(Boolean))];
     return{name:clean(item.name||slug),slug,url:safeUrl(item.url||ROOT+slug+'/',ROOT),type,genres,order,globalRating:Number(item.viewerRating??item.rating??0)||0};
@@ -135,8 +136,24 @@
     if(mode==='az')return a.name.localeCompare(b.name);
     const delta=viewerScore(b)-viewerScore(a);return Math.abs(delta)>0.001?delta:a.order-b.order;
   }
+  function mixUnrankedDiscovery(list){
+    if(activeType!=='all'||activeSort()!=='top'||activeGenre()||clean(els.search?.value))return list;
+    const ranked=list.filter(channel=>viewerScore(channel)>0);
+    const unseen=list.filter(channel=>viewerScore(channel)<=0);
+    const tv=unseen.filter(channel=>channel.type==='tv');
+    const web=unseen.filter(channel=>channel.type==='website');
+    if(!tv.length||!web.length)return list;
+    const mixed=[];
+    while(tv.length||web.length){
+      for(let i=0;i<4&&tv.length;i++)mixed.push(tv.shift());
+      if(web.length)mixed.push(web.shift());
+      if(!tv.length&&web.length)mixed.push(...web.splice(0));
+    }
+    return ranked.concat(mixed);
+  }
   function applyView(){
-    viewChannels=channels.filter(typeMatches).filter(genreMatches).filter(searchMatches).sort(compareChannels);
+    const ordered=channels.filter(typeMatches).filter(genreMatches).filter(searchMatches).sort(compareChannels);
+    viewChannels=mixUnrankedDiscovery(ordered);
     const frag=document.createDocumentFragment();viewChannels.forEach(channel=>{const card=cards.get(channel.slug);if(card)frag.appendChild(card)});els.grid.replaceChildren(frag);
     markSelection();setupVisibleScanning();
     const tv=viewChannels.filter(c=>c.type==='tv').length,web=viewChannels.length-tv;
@@ -225,14 +242,19 @@
     els.nowTitle.textContent=state.title||(channel.type==='website'?channel.name:'Tuning '+channel.name);els.nowMeta.textContent=state.meta||(channel.type==='website'?'Loading the full page inside Omni TV.':'Preparing the live player without leaving Omni TV.');
     els.open.disabled=false;els.open.textContent=channel.type==='website'?'Open website':'Open station';els.wake.disabled=true;els.wake.textContent=channel.type==='website'?'Loading…':'Tuning…';els.status.textContent='';
     els.frame.src=channel.url+(channel.url.includes('?')?'&':'?')+(channel.type==='website'?'omni=website':'omni=player')+'&v='+Date.now();history.replaceState(null,'','#'+encodeURIComponent(channel.slug));
-    clearInterval(stationPoll);let tries=0;stationPoll=setInterval(()=>{if(generation!==tuneId){clearInterval(stationPoll);return}tries++;if(ready(generation)){clearInterval(stationPoll);stationPoll=setInterval(syncSelected,2000);return}if(tries>80){clearInterval(stationPoll);els.loading.hidden=true;els.status.textContent=channel.type==='website'?'This website cannot be embedded; Open website still works.':'This station player needs repair; Open station still works.';els.wake.textContent=channel.type==='website'?'Open website':'Player unavailable'}},150);
+    clearInterval(stationPoll);let tries=0;stationPoll=setInterval(()=>{if(generation!==tuneId){clearInterval(stationPoll);return}tries++;if(ready(generation)){clearInterval(stationPoll);stationPoll=setInterval(syncSelected,2000);return}if(tries>80){clearInterval(stationPoll);els.loading.hidden=true;els.status.textContent=channel.type==='website'?'This website cannot be embedded; Open website still works.':'This station player needs repair; Open station still works.';if(channel.type==='website')els.wake.disabled=false;els.wake.textContent=channel.type==='website'?'Open website':'Player unavailable'}},150);
   }
   function step(delta){
     const pool=viewChannels.length?viewChannels:channels;if(!pool.length)return;
     let index=selected?pool.findIndex(c=>c.slug===selected.slug):-1;if(index<0)index=delta>0?-1:0;index=(index+delta+pool.length)%pool.length;selectChannel(pool[index]);
   }
   function wake(){
-    if(!selected)return;if(selected.type==='website'){try{els.frame.contentWindow.focus()}catch(_){ }els.status.textContent='Browsing '+selected.name+' inside Omni TV.';return}
+    if(!selected)return;
+    if(selected.type==='website'){
+      if(!els.shell.classList.contains('website-ready')){window.open(selected.url,'_blank','noopener');els.status.textContent='Opened '+selected.name+' directly.';return}
+      try{els.frame.contentWindow.focus()}catch(_){ }
+      els.status.textContent='Browsing '+selected.name+' inside Omni TV.';return;
+    }
     const doc=stationDoc();if(!doc?.body)return;try{enterButton(doc)?.click()}catch(_){ }isolate(doc);els.shell.classList.add('station-ready','station-playing');overlay.hidden=true;els.wake.disabled=false;els.wake.textContent='Live';els.status.textContent=selected.name+' joined live.';syncSelected();
   }
   function fromHash(){const slug=decodeURIComponent(location.hash.slice(1)||'').toLowerCase();if(!slug)return false;const channel=channels.find(c=>c.slug.toLowerCase()===slug);if(channel){selectChannel(channel);return true}return false}
