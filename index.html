@@ -8,22 +8,22 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Omni TV — Surf the Infinity TV Network Live</title>
-  <meta name="description" content="Omni TV puts the Infinity TV network on one screen. Pick a live channel and watch its current synchronized program without leaving Omni TV.">
+  <title>Omni TV — Surf Channels and Websites</title>
+  <meta name="description" content="Omni TV mixes live Infinity TV channels with useful websites in one surfable guide. Filter by TV, websites, genre, or popularity without leaving the remote.">
   <link rel="canonical" href="https://www-infinity4.github.io/Omni-TV/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Omni TV">
-  <meta property="og:title" content="Omni TV — Every Live Channel on One Screen">
-  <meta property="og:description" content="Flip through the Infinity TV network and join each station at the exact program position airing now.">
+  <meta property="og:title" content="Omni TV — Channels + Websites on One Remote">
+  <meta property="og:description" content="Surf live TV and useful websites together, or filter by type and genre.">
   <meta property="og:url" content="https://www-infinity4.github.io/Omni-TV/">
   <meta property="og:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Omni TV — Live Network Surfer">
-  <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
+  <meta name="twitter:title" content="Omni TV — Channel + Website Surfer">
+  <meta name="twitter:description" content="One remote for live channels, websites, genres and discovery.">
   <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
-  <link rel="stylesheet" href="styles.css?v=20260914-omnifix3">
+  <link rel="stylesheet" href="styles.css?v=20260914-discovery1">
   <style>
     .topbar .channel-menu{position:relative;flex:0 0 auto}
     .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:104px;width:auto;height:42px;padding:0 12px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:13px;font-weight:900;white-space:nowrap}
@@ -33,13 +33,16 @@
     .topbar .channel-menu>nav a[href*="/Omni-TV/"]{outline:2px solid #7dd3fc;background:rgba(125,211,252,.12)}
     .topbar .channel-menu>nav .remote-error{padding:10px 11px;color:#fca5a5;font-weight:800}
     .omni-tools{margin:16px 0 2px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:#0a101a;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.omni-tool-links{display:flex;gap:7px;flex-wrap:wrap}.omni-tool-links a{min-height:42px;display:inline-flex;align-items:center;padding:0 13px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:#111827;color:#fff;text-decoration:none;font-weight:850}.omni-tool-links a:first-child{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.omni-web-search{display:flex;gap:8px}.omni-web-search input{min-width:0;flex:1;min-height:44px;padding:0 13px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#07101c;color:#fff;font:700 14px system-ui}.omni-web-search button{min-height:44px;padding:0 15px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font-weight:900}
+    .discovery-controls{margin-top:14px;display:grid;grid-template-columns:auto minmax(170px,240px) minmax(180px,1fr);gap:10px;align-items:center}.mode-tabs{display:flex;gap:6px;flex-wrap:wrap}.mode-tabs button,.genre-select,.rank-note{min-height:42px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#0b1220;color:#fff;font:800 13px system-ui}.mode-tabs button{padding:0 13px;cursor:pointer}.mode-tabs button[aria-pressed="true"]{background:linear-gradient(135deg,#0ea5e9,#7c3aed);border-color:transparent}.genre-select{width:100%;padding:0 12px}.rank-note{display:flex;align-items:center;padding:0 12px;color:#cbd5e1;font-weight:700}.rank-note strong{color:#fff;margin-right:5px}.channel-card .type-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.channel-card[data-type="website"] .live-badge{background:#6d28d9}.channel-card[data-type="website"] .live-badge::before{content:'WEB';font-size:10px}.channel-card[data-type="website"] .live-badge{font-size:0}.channel-card[data-type="website"]{outline-color:rgba(167,139,250,.35)}
     .channel-card{position:relative!important;overflow:hidden!important;isolation:isolate!important;contain:layout paint style!important;background:#090d14!important}.channel-card .channel-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:.48;pointer-events:none}.channel-card .channel-shade{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.88) 78%);pointer-events:none}.channel-card>.channel-top,.channel-card>.program-title,.channel-card>.program-meta{position:relative;z-index:2}.channel-card::before{display:none!important}.channel-card .program-title{align-self:end}.channel-card .program-meta{align-self:end}.channel-card .channel-art[hidden]{display:none!important}
+    .site-card{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:28px;text-align:center;background:radial-gradient(circle at 50% 20%,rgba(124,58,237,.28),transparent 42%),#05070b}.site-card[hidden]{display:none}.site-card div{max-width:620px}.site-card span{display:block;color:#a78bfa;font-weight:900;letter-spacing:.14em}.site-card strong{display:block;margin-top:10px;font-size:clamp(24px,5vw,48px)}.site-card p{color:#cbd5e1;line-height:1.55}.site-card button{min-height:46px;padding:0 18px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font-weight:900;cursor:pointer}
+    @media(max-width:900px){.discovery-controls{grid-template-columns:1fr 1fr}.rank-note{grid-column:1/-1}}
     @media(max-width:760px){.omni-tools{grid-template-columns:1fr}.omni-web-search{width:100%}}
-    @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{min-width:96px;height:40px;padding:0 10px}.omni-tool-links a{flex:1;justify-content:center}.omni-web-search{display:grid;grid-template-columns:1fr auto}}
+    @media(max-width:560px){.discovery-controls{grid-template-columns:1fr}.rank-note{grid-column:auto}.mode-tabs{display:grid;grid-template-columns:repeat(3,1fr)}.mode-tabs button{padding:0 8px}.topbar .network-state span{display:none}.topbar .channel-menu>summary{min-width:96px;height:40px;padding:0 10px}.omni-tool-links a{flex:1;justify-content:center}.omni-web-search{display:grid;grid-template-columns:1fr auto}}
   </style>
   <script src="https://www-infinity4.github.io/Control-Phi/channel-guide.js?v=20260914-probefix1"></script>
 </head>
-<body data-omni-build="20260914-gptmodes1">
+<body data-omni-build="20260914-discovery1">
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
     <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
@@ -50,13 +53,14 @@
   <main id="top">
     <section class="watch" aria-labelledby="nowTitle">
       <div class="now-head">
-        <div><p id="channelLabel">OMNI TV</p><h1 id="nowTitle">Choose a live channel</h1><span id="nowMeta">The station stays synchronized to its own schedule.</span></div>
-        <div class="head-actions"><button id="openStation" type="button" disabled>Open station</button><button id="shareButton" type="button">Share</button></div>
+        <div><p id="channelLabel">OMNI TV</p><h1 id="nowTitle">Choose a channel or website</h1><span id="nowMeta">Surf the mixed guide or filter it below.</span></div>
+        <div class="head-actions"><button id="openStation" type="button" disabled>Open</button><button id="shareButton" type="button">Share</button></div>
       </div>
       <div class="screen-shell" id="screenShell">
-        <iframe id="stationFrame" title="Omni TV live station player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <div id="idleCard" class="idle-card"><span>OMNI TV</span><strong>Surf the network below</strong><small>Tap a station to pipe its current live program into this screen.</small></div>
-        <div id="loadingCard" class="loading-card" hidden><span id="loadingChannel">Tuning…</span><strong>Joining the live station clock</strong></div>
+        <iframe id="stationFrame" title="Omni TV live channel and website viewer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <div id="idleCard" class="idle-card"><span>OMNI TV</span><strong>Surf channels + websites</strong><small>Use CH− / CH+ to move through the mixed discovery stream, or filter the guide below.</small></div>
+        <div id="loadingCard" class="loading-card" hidden><span id="loadingChannel">Tuning…</span><strong>Opening selection</strong></div>
+        <div id="siteCard" class="site-card" hidden><div><span>WEBSITE</span><strong id="siteCardTitle">Website</strong><p id="siteCardText">This site does not allow an embedded preview. You can still open it directly or keep surfing.</p><button id="siteCardOpen" type="button">Open website</button></div></div>
       </div>
       <div class="surf-controls" aria-label="Channel controls"><button id="prevChannel" type="button" aria-label="Previous channel">◀ CH−</button><button id="wakeChannel" type="button" disabled>Tap to start</button><button id="nextChannel" type="button" aria-label="Next channel">CH+ ▶</button><span id="status" role="status" aria-live="polite"></span></div>
     </section>
@@ -67,12 +71,17 @@
     </section>
 
     <section class="network" aria-labelledby="networkHeading">
-      <div class="network-heading"><div><p>LIVE REMOTE</p><h2 id="networkHeading">What’s on across the network</h2></div><label class="search"><span>Find</span><input id="channelSearch" type="search" placeholder="Channel or program" autocomplete="off"></label></div>
+      <div class="network-heading"><div><p>DISCOVERY REMOTE</p><h2 id="networkHeading">What’s on across TV + the web</h2></div><label class="search"><span>Find</span><input id="channelSearch" type="search" placeholder="Channel, site or program" autocomplete="off"></label></div>
+      <div class="discovery-controls" aria-label="Guide filters">
+        <div class="mode-tabs" role="group" aria-label="Show"><button id="modeAll" type="button" data-mode="all" aria-pressed="true">All</button><button type="button" data-mode="tv" aria-pressed="false">TV</button><button type="button" data-mode="website" aria-pressed="false">Websites</button></div>
+        <label><span class="sr-only">Genre</span><select id="genreFilter" class="genre-select"><option value="all">All genres</option></select></label>
+        <div class="rank-note"><strong>Smart order:</strong><span id="rankNote">popular + recently enjoyed, with discovery mixed in</span></div>
+      </div>
       <div id="channelGrid" class="channel-grid" aria-live="polite"></div>
     </section>
   </main>
 
-  <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
+  <footer><strong>OMNI TV</strong><span>One remote for synchronized channels, websites and discovery.</span></footer>
 
   <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260914-probefix1" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js'"></script>
   <script>
@@ -81,14 +90,14 @@
       const menu=document.querySelector('details[data-channel-menu]'),nav=menu?.querySelector('nav');if(!menu||!nav)return;
       const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       async function refresh(){
-        for(const source of [`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,`${RAW}?_remote=${Date.now()}`]){try{const response=await fetch(source,{cache:'no-store'});if(!response.ok)continue;const data=await response.json();if(!Array.isArray(data.channels)||!data.channels.length)continue;nav.innerHTML=data.channels.map(item=>`<a href="${ROOT}${encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/')}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`).join('');menu.dataset.controlPhi='connected';return}catch(_){}}
+        for(const source of [`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,`${RAW}?_remote=${Date.now()}`]){try{const response=await fetch(source,{cache:'no-store'});if(!response.ok)continue;const data=await response.json();if(!Array.isArray(data.channels)||!data.channels.length)continue;nav.innerHTML=data.channels.map(item=>`<a href="${item.url?esc(item.url):ROOT+encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/')}" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}${item.type==='website'?' · WEB':''}</a>`).join('');menu.dataset.controlPhi='connected';return}catch(_){}}
         if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">Channel list unavailable.</span>';
       }
       refresh();window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});setInterval(refresh,60000);
     })();
   </script>
   <script src="probe-guard.js?v=20260914-probefix2"></script>
-  <script src="app-stable.js?v=20260914-probefix2"></script>
+  <script src="app-stable.js?v=20260914-discovery1"></script>
   <script src="omni-assistant.js?v=20260914-gptmodes1"></script>
   <script src="news-phi-bridge.js?v=20260913-newsphi1"></script>
 </body>
