@@ -4,6 +4,9 @@
   const ROOT="https://www-infinity4.github.io/";
   const RAW_CHANNELS="https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json";
   const NON_TV=new Set(["News-Phi","Control-Phi","Omni-TV","Hydrogen-Digital-TV"]);
+  const PROBE_WORKERS=4;
+  const PROBE_TIMEOUT=3200;
+  const RESCAN_MS=180000;
   const $=id=>document.getElementById(id);
   const els={
     shell:$("screenShell"),frame:$("stationFrame"),grid:$("channelGrid"),clock:$("clock"),networkState:$("networkState"),
@@ -21,13 +24,11 @@
   let tuneGeneration=0;
   let probeGeneration=0;
   const liveState=new Map();
-  const PROBE_WORKERS=4;
-  const PROBE_TIMEOUT=2800;
-  const RESCAN_MS=180000;
+  const cardEls=new Map();
 
   const clean=value=>String(value==null?"":value).replace(/\s+/g," ").trim();
-  const esc=value=>clean(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const slugOf=item=>clean(item?.slug||item?.path||item?.repo||item?.name?.replace(/\s+/g,"-")||"");
+  const safeUrl=(value,base=location.href)=>{try{const url=new URL(value,base);return /^https?:$/.test(url.protocol)?url.href:""}catch(_){return ""}};
 
   const tapOverlay=document.createElement("button");
   tapOverlay.type="button";
@@ -70,89 +71,90 @@
       try{
         const list=await fetchRegistry(source);
         if(list.length)return list;
-      }catch(error){
-        console.warn("Channel registry source unavailable",source,error);
-      }
+      }catch(error){console.warn("Channel registry source unavailable",source,error)}
     }
     return dedupe(Array.isArray(window.INFINITY_CHANNELS)?window.INFINITY_CHANNELS:[]);
   }
 
-  function cardHTML(channel,index){
-    const state=liveState.get(channel.slug)||{};
-    const title=state.title||(state.checked?"Program title unavailable":"Checking what’s on…");
-    const meta=state.meta||(state.checked?`Live on ${channel.name}`:"Reading station schedule…");
-    const stateAttr=state.title?"live":"checking";
-    return `<button class="channel-card" type="button" data-index="${index}" data-search="${esc((channel.name+" "+title).toLowerCase())}" aria-current="${selected&&selected.slug===channel.slug?"true":"false"}"><span class="channel-top"><span class="channel-name">${esc(channel.name)}</span><span class="live-badge">LIVE</span></span><strong class="program-title" data-state="${stateAttr}">${esc(title)}</strong><span class="program-meta">${esc(meta)}</span></button>`;
-  }
-
-  function wireCard(button,index){
-    const channel=channels[index];
-    const art=liveState.get(channel?.slug)?.image||"";
-    try{
-      const url=new URL(art,location.href);
-      if(/^https?:$/.test(url.protocol))button.style.setProperty("--art",`url(${JSON.stringify(url.href)})`);
-      else button.style.setProperty("--art","none");
-    }catch(_){button.style.setProperty("--art","none")}
+  function makeCard(channel,index){
+    const button=document.createElement("button");
+    button.className="channel-card";
+    button.type="button";
+    button.dataset.index=String(index);
+    button.innerHTML='<span class="channel-top"><span class="channel-name"></span><span class="live-badge">LIVE</span></span><strong class="program-title" data-state="checking"></strong><span class="program-meta"></span>';
+    button.querySelector(".channel-name").textContent=channel.name;
     button.addEventListener("click",()=>selectChannel(index));
+    cardEls.set(channel.slug,button);
+    updateCard(channel.slug);
+    return button;
   }
 
   function renderGrid(){
     if(!els.grid)return;
-    els.grid.innerHTML=channels.map(cardHTML).join("");
-    els.grid.querySelectorAll(".channel-card").forEach(button=>wireCard(button,Number(button.dataset.index)));
+    cardEls.clear();
+    const frag=document.createDocumentFragment();
+    channels.forEach((channel,index)=>frag.appendChild(makeCard(channel,index)));
+    els.grid.replaceChildren(frag);
+    updateSelection();
     applyFilter();
     els.networkState.textContent=channels.length?`${channels.length} LIVE CHANNELS`:"CHANNEL REGISTRY OFFLINE";
   }
 
   function updateCard(slug){
-    const index=channels.findIndex(item=>item.slug===slug);
-    if(index<0||!els.grid)return;
-    const old=els.grid.querySelector(`[data-index="${index}"]`);
-    if(!old)return;
-    const holder=document.createElement("div");
-    holder.innerHTML=cardHTML(channels[index],index);
-    const fresh=holder.firstElementChild;
-    wireCard(fresh,index);
-    old.replaceWith(fresh);
-    applyFilter();
+    const channel=channels.find(item=>item.slug===slug);
+    const card=cardEls.get(slug);
+    if(!channel||!card)return;
+    const state=liveState.get(slug)||{};
+    const title=state.title||(state.checked?"Program title unavailable":"Checking what’s on…");
+    const meta=state.meta||(state.checked?`Live on ${channel.name}`:"Reading station schedule…");
+    const titleEl=card.querySelector(".program-title");
+    const metaEl=card.querySelector(".program-meta");
+    titleEl.textContent=title;
+    titleEl.dataset.state=state.title?"live":"checking";
+    metaEl.textContent=meta;
+    card.dataset.search=`${channel.name} ${title}`.toLowerCase();
+    const art=safeUrl(state.image,channel.url);
+    card.style.setProperty("--art",art?`url(${JSON.stringify(art)})`:"none");
+  }
+
+  function updateSelection(){
+    cardEls.forEach((card,slug)=>card.setAttribute("aria-current",selected&&selected.slug===slug?"true":"false"));
   }
 
   function applyFilter(){
     const term=clean(els.search?.value).toLowerCase();
-    els.grid?.querySelectorAll(".channel-card").forEach(card=>{card.hidden=!!term&&!card.dataset.search.includes(term)});
+    cardEls.forEach(card=>{card.hidden=!!term&&!String(card.dataset.search||"").includes(term)});
   }
 
   function pageImage(doc,baseUrl=""){
-    const meta=doc.querySelector('meta[property="og:image"],meta[name="twitter:image"]')?.content||"";
-    if(!meta)return "";
-    try{return new URL(meta,baseUrl||location.href).href}catch(_){return meta}
+    const raw=doc.querySelector('meta[property="og:image"],meta[name="twitter:image"]')?.content||"";
+    return raw?safeUrl(raw,baseUrl||location.href):"";
   }
 
   function programArt(doc,baseUrl=""){
+    const explicit=doc.querySelector('[data-program-art],[data-now-art],.current-program img,.guide-row.current img,.row.now img')?.getAttribute?.("src")||"";
+    if(explicit)return safeUrl(explicit,baseUrl||location.href);
     try{
-      const raw=getComputedStyle(doc.body).getPropertyValue("--program-art")||doc.body?.style?.getPropertyValue("--program-art")||"";
+      const raw=doc.body?.style?.getPropertyValue("--program-art")||doc.documentElement?.style?.getPropertyValue("--program-art")||"";
       const match=String(raw).match(/url\(["']?([^"')]+)["']?\)/i);
-      if(match?.[1])return new URL(match[1],baseUrl||location.href).href;
+      if(match?.[1])return safeUrl(match[1],baseUrl||location.href);
     }catch(_){ }
-    // A page/social image describes the channel, not necessarily the named
-    // program. Only explicit current-program artwork belongs on this card.
     return "";
   }
 
   function liveTitle(doc){
     const selectors=[
       "[data-now-playing]","#programTitle","#nowTitle",
-      "[aria-current='true'] [data-program-title]",
-      ".guide-row.current .program-title",
-      ".current-program [data-program-title]",
+      "[aria-current='true'] [data-program-title]","[aria-current='true'] strong",
+      ".guide-row.current .program-title",".guide-row.current strong",
+      ".row.now strong",".current-program [data-program-title]",".current-program strong",
       "#stationCard:not([hidden]) #stationCardTitle"
     ];
     for(const selector of selectors){
       const node=doc.querySelector(selector);
       const text=clean(node?.dataset?.programTitle||node?.textContent);
-      if(!text)continue;
+      if(!text||text.length>180)continue;
       if(/loading|choose|please wait|tuning|joining|station break|live network|what.?s on|tv guide/i.test(text))continue;
-      if(text.length>180)continue;
       return text;
     }
     return "";
@@ -163,9 +165,23 @@
       doc.querySelector("#programTime")?.textContent,
       doc.querySelector("#nowMeta")?.textContent,
       doc.querySelector("#slotTime")?.textContent,
-      doc.querySelector(".guide-row.current time")?.textContent
+      doc.querySelector(".guide-row.current time")?.textContent,
+      doc.querySelector(".row.now time")?.textContent
     ].map(clean).filter(Boolean);
     return [...new Set(values)].slice(0,2).join(" · ");
+  }
+
+  function captureState(channel,doc,baseUrl=""){
+    if(!channel||!doc?.body)return null;
+    const previous=liveState.get(channel.slug)||{};
+    const title=liveTitle(doc);
+    const sameProgram=!!title&&title===previous.title;
+    const image=programArt(doc,baseUrl)||pageImage(doc,baseUrl)||(sameProgram?previous.image:"")||"";
+    const meta=liveMeta(doc)||(sameProgram?previous.meta:"")||"";
+    const next={...previous,title,image,meta,checked:true,checkedAt:Date.now()};
+    liveState.set(channel.slug,next);
+    updateCard(channel.slug);
+    return next;
   }
 
   function enterButton(doc){
@@ -185,26 +201,18 @@
     if(active&&els.loadingChannel&&text)els.loadingChannel.textContent=text;
   }
 
-  function hideTapOverlay(){
-    tapOverlay.hidden=true;
-    els.shell?.classList.remove("awaiting-tap");
-  }
-
+  function hideTapOverlay(){tapOverlay.hidden=true;els.shell?.classList.remove("awaiting-tap")}
   function showTapOverlay(){
     if(!selected)return;
-    tapOverlay.innerHTML=`<span>LIVE · ${esc(selected.name)}</span><strong>Tap to start</strong><small>${esc((liveState.get(selected.slug)||{}).title||"Join at the current live position")}</small>`;
+    const strong=tapOverlay.querySelector("strong"),label=tapOverlay.querySelector("span"),small=tapOverlay.querySelector("small");
+    if(label)label.textContent=`LIVE · ${selected.name}`;
+    if(strong)strong.textContent="Tap to start";
+    if(small)small.textContent=(liveState.get(selected.slug)||{}).title||"Join at the current live position";
     tapOverlay.hidden=false;
     els.shell?.classList.add("awaiting-tap");
   }
-
-  function hideStationFrame(){
-    els.shell?.classList.remove("station-ready","station-playing");
-    hideTapOverlay();
-  }
-
-  function revealStationFrame(){
-    els.shell?.classList.add("station-ready");
-  }
+  function hideStationFrame(){els.shell?.classList.remove("station-ready","station-playing");hideTapOverlay()}
+  function revealStationFrame(){els.shell?.classList.add("station-ready")}
 
   function isolatePlayer(doc){
     try{
@@ -238,30 +246,14 @@
       shell.style.setProperty("margin","0","important");
       shell.style.setProperty("transform","none","important");
       return true;
-    }catch(error){
-      console.warn("Could not isolate station player",error);
-      return false;
-    }
-  }
-
-  function captureState(channel,doc,baseUrl=""){
-    if(!channel||!doc?.body)return null;
-    const previous=liveState.get(channel.slug)||{};
-    const title=liveTitle(doc);
-    const sameProgram=!!title&&title===previous.title;
-    const image=programArt(doc,baseUrl)||(sameProgram?previous.image:"")||"";
-    const meta=liveMeta(doc)||(sameProgram?previous.meta:"")||"";
-    const next={...previous,title,image,meta,checked:true,checkedAt:Date.now()};
-    liveState.set(channel.slug,next);
-    updateCard(channel.slug);
-    return next;
+    }catch(error){console.warn("Could not isolate station player",error);return false}
   }
 
   function syncSelectedInfo(){
     if(!selected)return;
     try{
       const doc=stationDocument();
-      if(!doc||!doc.body)return;
+      if(!doc?.body)return;
       const next=captureState(selected,doc,selected.url);
       if(next?.title)els.nowTitle.textContent=next.title;
       els.nowMeta.textContent=next?.meta||`Live from ${selected.name} · synchronized to the station clock`;
@@ -272,7 +264,7 @@
     if(!selected)return false;
     try{
       const doc=stationDocument();
-      if(!doc||!doc.body)return false;
+      if(!doc?.body)return false;
       const isolated=isolatePlayer(doc);
       syncSelectedInfo();
       if(isolated)revealStationFrame();
@@ -283,13 +275,13 @@
   function markStationReady(generation){
     if(generation!==tuneGeneration||!selected)return false;
     const doc=stationDocument();
-    if(!doc||!doc.body||!playerShell(doc))return false;
+    if(!doc?.body||!playerShell(doc))return false;
     clearTimeout(loadTimer);
     if(!configureLoadedStation())return false;
     setTuning(false);
     showTapOverlay();
     els.status.textContent="";
-    if(els.wake){els.wake.disabled=false;els.wake.textContent="Tap to start";}
+    if(els.wake){els.wake.disabled=false;els.wake.textContent="Tap to start"}
     return true;
   }
 
@@ -298,18 +290,15 @@
     let checks=0;
     readinessPoll=setInterval(()=>{
       checks++;
-      if(generation!==tuneGeneration){clearInterval(readinessPoll);readinessPoll=null;return;}
-      if(markStationReady(generation)){clearInterval(readinessPoll);readinessPoll=null;return;}
+      if(generation!==tuneGeneration){clearInterval(readinessPoll);readinessPoll=null;return}
+      if(markStationReady(generation)){clearInterval(readinessPoll);readinessPoll=null;return}
       if(checks>=96){
-        clearInterval(readinessPoll);readinessPoll=null;
-        setTuning(false);
-        hideStationFrame();
+        clearInterval(readinessPoll);readinessPoll=null;setTuning(false);hideStationFrame();
         if(selected){
           els.nowTitle.textContent=(liveState.get(selected.slug)||{}).title||`${selected.name} player unavailable`;
           els.nowMeta.textContent="Omni TV could not isolate this station’s player shell.";
           els.status.textContent="Open station is available while this channel is repaired for Omni mode.";
-          els.wake.disabled=true;
-          els.wake.textContent="Player unavailable";
+          els.wake.disabled=true;els.wake.textContent="Player unavailable";
         }
       }
     },125);
@@ -323,6 +312,7 @@
     tuneGeneration++;
     const generation=tuneGeneration;
     const known=liveState.get(selected.slug)||{};
+    updateSelection();
 
     if(els.idle)els.idle.hidden=true;
     hideStationFrame();
@@ -339,15 +329,12 @@
     loadTimer=setTimeout(()=>{
       if(generation!==tuneGeneration)return;
       setTuning(false);
-      if(!markStationReady(generation)){
-        els.status.textContent="Still locating this station’s player…";
-      }
+      if(!markStationReady(generation))els.status.textContent="Still locating this station’s player…";
     },7000);
 
     const separator=selected.url.includes("?")?"&":"?";
     els.frame.src=`${selected.url}${separator}omni=player&v=${Date.now()}`;
     history.replaceState(null,"",`#${encodeURIComponent(selected.slug)}`);
-    renderGrid();
     watchStationReadiness(generation);
 
     if(stationPoll)clearInterval(stationPoll);
@@ -364,29 +351,17 @@
     if(!doc||!playerShell(doc))return;
     let activated=false;
     const enter=enterButton(doc);
-    if(enter&&typeof enter.click==="function"){
-      try{enter.click();activated=true;}catch(_){ }
-    }
-    isolatePlayer(doc);
-    revealStationFrame();
-    hideTapOverlay();
-    els.shell?.classList.add("station-playing");
-    els.wake.disabled=false;
-    els.wake.textContent="Live";
+    if(enter&&typeof enter.click==="function")try{enter.click();activated=true}catch(_){ }
+    isolatePlayer(doc);revealStationFrame();hideTapOverlay();els.shell?.classList.add("station-playing");
+    els.wake.disabled=false;els.wake.textContent="Live";
     els.status.textContent=activated?`${selected.name} joined live.`:`${selected.name} player is ready. Tap the video if Android requests one more playback gesture.`;
-    try{
-      const iframe=doc.querySelector("#player iframe,.player iframe,iframe[src*='youtube.com/embed']");
-      iframe?.focus?.();
-    }catch(_){ }
+    try{doc.querySelector("#player iframe,.player iframe,iframe[src*='youtube.com/embed']")?.focus?.()}catch(_){ }
   }
 
   els.frame.addEventListener("load",()=>{
     if(!selected)return;
     const generation=tuneGeneration;
-    setTimeout(()=>markStationReady(generation),0);
-    setTimeout(()=>markStationReady(generation),120);
-    setTimeout(()=>markStationReady(generation),450);
-    setTimeout(()=>markStationReady(generation),1000);
+    [0,120,450,1000].forEach(delay=>setTimeout(()=>markStationReady(generation),delay));
   });
 
   function chooseFromHash(){
@@ -400,43 +375,24 @@
   async function probeChannel(channel,frame,generation){
     if(generation!==probeGeneration)return;
     await new Promise(resolve=>{
-      let settled=false;
-      let interval=null;
-      const finish=()=>{
-        if(settled)return;
-        settled=true;
-        clearInterval(interval);
-        clearTimeout(timeout);
-        frame.onload=null;
-        resolve();
-      };
+      let settled=false,interval=null;
+      const finish=()=>{if(settled)return;settled=true;clearInterval(interval);clearTimeout(timeout);frame.onload=null;resolve()};
       const inspect=()=>{
         if(generation!==probeGeneration)return finish();
         try{
           const doc=frame.contentDocument||frame.contentWindow?.document;
           if(!doc?.body)return;
           const title=liveTitle(doc);
-          if(title){captureState(channel,doc,channel.url);return finish();}
+          if(title){captureState(channel,doc,channel.url);finish()}
         }catch(_){ }
       };
-      frame.onload=()=>{
-        inspect();
-        interval=setInterval(inspect,120);
-      };
+      frame.onload=()=>{inspect();interval=setInterval(inspect,120)};
       const timeout=setTimeout(()=>{
         try{
           const doc=frame.contentDocument||frame.contentWindow?.document;
           if(doc?.body)captureState(channel,doc,channel.url);
-          else{
-            const previous=liveState.get(channel.slug)||{};
-            liveState.set(channel.slug,{...previous,checked:true,checkedAt:Date.now()});
-            updateCard(channel.slug);
-          }
-        }catch(_){
-          const previous=liveState.get(channel.slug)||{};
-          liveState.set(channel.slug,{...previous,checked:true,checkedAt:Date.now()});
-          updateCard(channel.slug);
-        }
+          else{liveState.set(channel.slug,{...(liveState.get(channel.slug)||{}),checked:true,checkedAt:Date.now()});updateCard(channel.slug)}
+        }catch(_){liveState.set(channel.slug,{...(liveState.get(channel.slug)||{}),checked:true,checkedAt:Date.now()});updateCard(channel.slug)}
         finish();
       },PROBE_TIMEOUT);
       const sep=channel.url.includes("?")?"&":"?";
@@ -447,27 +403,18 @@
   function startMetadataScan(){
     if(!channels.length)return;
     probeGeneration++;
-    const generation=probeGeneration;
-    const queue=channels.slice();
+    const generation=probeGeneration,queue=channels.slice();
     let cursor=0;
     const workers=Array.from({length:Math.min(PROBE_WORKERS,queue.length)},()=>{
       const frame=document.createElement("iframe");
-      frame.className="probe-frame";
-      frame.setAttribute("aria-hidden","true");
-      frame.tabIndex=-1;
-      document.body.appendChild(frame);
-      return frame;
+      frame.className="probe-frame";frame.setAttribute("aria-hidden","true");frame.tabIndex=-1;document.body.appendChild(frame);return frame;
     });
     workers.forEach(async frame=>{
       while(generation===probeGeneration){
         const index=cursor++;
         if(index>=queue.length)break;
         const channel=queue[index];
-        if(selected&&channel.slug===selected.slug){
-          const doc=stationDocument();
-          if(doc?.body)captureState(channel,doc,channel.url);
-          continue;
-        }
+        if(selected&&channel.slug===selected.slug){const doc=stationDocument();if(doc?.body)captureState(channel,doc,channel.url);continue}
         await probeChannel(channel,frame,generation);
       }
       frame.remove();
@@ -477,22 +424,11 @@
   async function share(){
     const state=selected?(liveState.get(selected.slug)||{}):{};
     const title=state.title||selected?.name||"Omni TV";
-    const payload={
-      title:selected?`${title} · Omni TV`:"Omni TV — Live Network Surfer",
-      text:selected?`Watching ${title} live from ${selected.name} inside Omni TV.`:"Flip through the Infinity TV network live on one page.",
-      url:location.href
-    };
+    const payload={title:selected?`${title} · Omni TV`:"Omni TV — Live Network Surfer",text:selected?`Watching ${title} live from ${selected.name} inside Omni TV.`:"Flip through the Infinity TV network live on one page.",url:location.href};
     try{
-      if(navigator.share){
-        await navigator.share(payload);
-        els.status.textContent="Shared. News Phi received this completed share.";
-      }else if(navigator.clipboard){
-        await navigator.clipboard.writeText(payload.url);
-        els.status.textContent="Omni TV link copied.";
-      }
-    }catch(error){
-      if(!error||error.name!=="AbortError")els.status.textContent="Share did not complete.";
-    }
+      if(navigator.share){await navigator.share(payload);els.status.textContent="Shared. News Phi received this completed share."}
+      else if(navigator.clipboard){await navigator.clipboard.writeText(payload.url);els.status.textContent="Omni TV link copied."}
+    }catch(error){if(!error||error.name!=="AbortError")els.status.textContent="Share did not complete."}
   }
 
   async function start(){
@@ -500,15 +436,10 @@
     setInterval(()=>els.clock.textContent=fmtClock(),1000);
     channels=await loadChannels();
     renderGrid();
-    if(!channels.length){
-      els.status.textContent="Channel registry did not load.";
-      return;
-    }
+    if(!channels.length){els.status.textContent="Channel registry did not load.";return}
     startMetadataScan();
     setInterval(startMetadataScan,RESCAN_MS);
-    if(!chooseFromHash()){
-      els.nowMeta.textContent="Choose any channel below. Omni TV will open its live player here.";
-    }
+    if(!chooseFromHash())els.nowMeta.textContent="Choose any channel below. Omni TV will open its live player here.";
   }
 
   tapOverlay.addEventListener("click",wakeSelected);
