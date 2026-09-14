@@ -23,138 +23,70 @@
   <meta name="twitter:title" content="Omni TV — Live Network Surfer">
   <meta name="twitter:description" content="One player. Every live Infinity TV station. Change channels without leaving the page.">
   <meta name="twitter:image" content="https://www-infinity4.github.io/Omni-TV/preview.png">
-  <link rel="stylesheet" href="styles.css?v=20260914-guide2">
+  <link rel="stylesheet" href="styles.css?v=20260914-omnifix3">
   <style>
     .topbar .channel-menu{position:relative;flex:0 0 auto}
-    .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:20px;font-weight:900}
+    .topbar .channel-menu>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:104px;width:auto;height:42px;padding:0 12px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#111827;color:#fff;font-size:13px;font-weight:900;white-space:nowrap}
     .topbar .channel-menu>summary::-webkit-details-marker{display:none}
-    .topbar .channel-menu>nav{position:absolute;right:0;top:calc(100% + 8px);z-index:300;width:min(330px,90vw);max-height:72vh;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#070b12;box-shadow:0 22px 70px rgba(0,0,0,.65)}
+    .topbar .channel-menu>nav{position:absolute;right:0;top:calc(100% + 8px);z-index:300;width:min(340px,92vw);max-height:72vh;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#070b12;box-shadow:0 22px 70px rgba(0,0,0,.65)}
     .topbar .channel-menu>nav a{display:block;padding:10px 11px;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;text-decoration:none;font-weight:800}
     .topbar .channel-menu>nav a[href*="/Omni-TV/"]{outline:2px solid #7dd3fc;background:rgba(125,211,252,.12)}
     .topbar .channel-menu>nav .remote-error{padding:10px 11px;color:#fca5a5;font-weight:800}
-    @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{width:40px;height:40px}}
+    .omni-tools{margin:16px 0 2px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:#0a101a;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.omni-tool-links{display:flex;gap:7px;flex-wrap:wrap}.omni-tool-links a{min-height:42px;display:inline-flex;align-items:center;padding:0 13px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:#111827;color:#fff;text-decoration:none;font-weight:850}.omni-tool-links a:first-child{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.omni-web-search{display:flex;gap:8px}.omni-web-search input{min-width:0;flex:1;min-height:44px;padding:0 13px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#07101c;color:#fff;font:700 14px system-ui}.omni-web-search button{min-height:44px;padding:0 15px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font-weight:900}
+    .channel-card{position:relative!important;overflow:hidden!important;isolation:isolate!important;contain:layout paint style!important;background:#090d14!important}.channel-card .channel-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:.48;pointer-events:none}.channel-card .channel-shade{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.88) 78%);pointer-events:none}.channel-card>.channel-top,.channel-card>.program-title,.channel-card>.program-meta{position:relative;z-index:2}.channel-card::before{display:none!important}.channel-card .program-title{align-self:end}.channel-card .program-meta{align-self:end}.channel-card .channel-art[hidden]{display:none!important}
+    @media(max-width:760px){.omni-tools{grid-template-columns:1fr}.omni-web-search{width:100%}}
+    @media(max-width:520px){.topbar .network-state span{display:none}.topbar .channel-menu>summary{min-width:96px;height:40px;padding:0 10px}.omni-tool-links a{flex:1;justify-content:center}.omni-web-search{display:grid;grid-template-columns:1fr auto}}
   </style>
 </head>
-<body data-omni-build="20260914-guide2">
+<body data-omni-build="20260914-omnifix3">
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Omni TV home"><span class="brand-mark">O</span><span>OMNI TV</span></a>
     <div class="network-state"><i></i><span id="networkState">LIVE NETWORK</span></div>
     <time id="clock">--:-- local</time>
-    <details class="channel-menu" data-channel-menu><summary aria-label="Open shared channel remote">☰</summary><nav aria-label="Switch channels"><span class="remote-error">Loading channels…</span></nav></details>
+    <details class="channel-menu" data-channel-menu><summary aria-label="Open channels"><span aria-hidden="true">☰</span><span>Channels</span></summary><nav aria-label="Switch channels"><span class="remote-error">Loading channels…</span></nav></details>
   </header>
 
   <main id="top">
     <section class="watch" aria-labelledby="nowTitle">
       <div class="now-head">
-        <div>
-          <p id="channelLabel">OMNI TV</p>
-          <h1 id="nowTitle">Choose a live channel</h1>
-          <span id="nowMeta">The station stays synchronized to its own schedule.</span>
-        </div>
-        <div class="head-actions">
-          <button id="openStation" type="button" disabled>Open station</button>
-          <button id="shareButton" type="button">Share</button>
-        </div>
+        <div><p id="channelLabel">OMNI TV</p><h1 id="nowTitle">Choose a live channel</h1><span id="nowMeta">The station stays synchronized to its own schedule.</span></div>
+        <div class="head-actions"><button id="openStation" type="button" disabled>Open station</button><button id="shareButton" type="button">Share</button></div>
       </div>
-
       <div class="screen-shell" id="screenShell">
         <iframe id="stationFrame" title="Omni TV live station player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <div id="idleCard" class="idle-card">
-          <span>OMNI TV</span>
-          <strong>Surf the network below</strong>
-          <small>Tap a station to pipe its current live program into this screen.</small>
-        </div>
-        <div id="loadingCard" class="loading-card" hidden>
-          <span id="loadingChannel">Tuning…</span>
-          <strong>Joining the live station clock</strong>
-        </div>
+        <div id="idleCard" class="idle-card"><span>OMNI TV</span><strong>Surf the network below</strong><small>Tap a station to pipe its current live program into this screen.</small></div>
+        <div id="loadingCard" class="loading-card" hidden><span id="loadingChannel">Tuning…</span><strong>Joining the live station clock</strong></div>
       </div>
+      <div class="surf-controls" aria-label="Channel controls"><button id="prevChannel" type="button" aria-label="Previous channel">◀ CH−</button><button id="wakeChannel" type="button" disabled>Tap to start</button><button id="nextChannel" type="button" aria-label="Next channel">CH+ ▶</button><span id="status" role="status" aria-live="polite"></span></div>
+    </section>
 
-      <div class="surf-controls" aria-label="Channel controls">
-        <button id="prevChannel" type="button" aria-label="Previous channel">◀ CH−</button>
-        <button id="wakeChannel" type="button" disabled>Tap to start</button>
-        <button id="nextChannel" type="button" aria-label="Next channel">CH+ ▶</button>
-        <span id="status" role="status" aria-live="polite"></span>
-      </div>
+    <section class="omni-tools" aria-label="Infinity tools">
+      <nav class="omni-tool-links"><a href="https://www-infinity4.github.io/Omni-TV/" aria-current="page">Omni TV</a><a href="https://www-infinity4.github.io/News-Phi/">News Phi</a><a href="https://www-infinity4.github.io/Omni-Phi/">Omni Phi</a><a href="https://www-infinity4.github.io/C13b0/phi">Infinity Phi</a></nav>
+      <form class="omni-web-search" action="https://www-infinity4.github.io/C13b0/phi" method="get"><input name="q" type="search" placeholder="Search the web with Infinity Phi" aria-label="Search the web" required><input type="hidden" name="run" value="1"><button type="submit">Search</button></form>
     </section>
 
     <section class="network" aria-labelledby="networkHeading">
-      <div class="network-heading">
-        <div><p>LIVE REMOTE</p><h2 id="networkHeading">What’s on across the network</h2></div>
-        <label class="search"><span>Find</span><input id="channelSearch" type="search" placeholder="Channel or program" autocomplete="off"></label>
-      </div>
+      <div class="network-heading"><div><p>LIVE REMOTE</p><h2 id="networkHeading">What’s on across the network</h2></div><label class="search"><span>Find</span><input id="channelSearch" type="search" placeholder="Channel or program" autocomplete="off"></label></div>
       <div id="channelGrid" class="channel-grid" aria-live="polite"></div>
     </section>
   </main>
 
   <footer><strong>OMNI TV</strong><span>One synchronized viewer for the Infinity TV network.</span></footer>
 
-  <script>
-    window.INFINITY_CHANNELS=[
-      {name:'Omni TV',path:'Omni-TV'},{name:'Hermit TV',path:'Hermit-TV'},{name:'Star Launcher',path:'Star-Launcher'},{name:'HBO',path:'HBO'},{name:'Starz',path:'Starz'},{name:'Cinemax',path:'Cinemax'},{name:'Showtime',path:'Showtime'},{name:'Encore',path:'Encore'},{name:'Cartoon Network',path:'Cartoon-Network'},{name:'WGN',path:'WGN'},{name:'TNT',path:'TNT'},{name:'NBC',path:'NBC'},{name:'FOX',path:'FOX'},{name:'FX',path:'FX'},{name:'Nickelodeon',path:'Nickelodeon'},{name:'FSN',path:'FSN'},{name:'ESPN',path:'ESPN'},{name:'MTV',path:'MTV'},{name:'VH1',path:'VH1'},{name:'AMC',path:'AMC'},{name:'Disney',path:'Disney'},{name:'USA',path:'USA'},{name:'Comedy Central',path:'Comedy-Central'},{name:'BET',path:'BET'},{name:'Discovery',path:'Discovery'},{name:'Nintendo TV',path:'Nintendo-TV'},{name:'Chiller',path:'Chiller'},{name:'TBS',path:'TBS'},{name:'ABC',path:'ABC'},{name:'CBS',path:'CBS'},{name:'PBS',path:'PBS'},{name:'History Channel',path:'History-Channel'},{name:'CNN',path:'CNN'},{name:'Trump TV',path:'Trump-TV'},{name:'ShopLC',path:'ShopLC'},{name:'Ozzy TV',path:'Ozzy-TV'},{name:'CCR TV',path:'CCR-TV'},{name:'Motor TV',path:'Motor-TV'},{name:'Physics TV',path:'Physics-TV'},{name:'Adventure TV',path:'Adventure-TV'},{name:'Trigger TV',path:'Trigger-TV'},{name:'Time Surfers',path:'Time-Surfers'},{name:'Syncord',path:'Syncord'},{name:'Astraflix',path:'Astraflix'},{name:'Vintech',path:'Vintech'},{name:'Flix Blender',path:'Flix-Blender'},{name:'Abstractia',path:'Abstractia-'},{name:'Animasync',path:'Animasync'},{name:'SeekSync',path:'SeekSync'},{name:'Azyryth',path:'Azyryth'},{name:'PowerSync',path:'PowerSync'},{name:'HyperSync',path:'HyperSync'},{name:'AIsync',path:'AIsync'},{name:'News Phi',path:'News-Phi'}
-    ];
-  </script>
-  <script>
-    (function omniRegistryHotfix(){
-      const nativeFetch=window.fetch.bind(window);
-      window.fetch=function(input,init){
-        try{
-          const raw=typeof input==='string'?input:input instanceof Request?input.url:String(input);
-          if(/\/Control-Phi\/channels\.json(?:[?#]|$)/i.test(raw)){
-            const url=new URL(raw,location.href);
-            url.searchParams.set('_omni',Date.now().toString());
-            if(input instanceof Request)input=new Request(url.href,input);else input=url.href;
-          }
-        }catch(_){ }
-        return nativeFetch(input,init);
-      };
-    })();
-  </script>
-  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260913-wallet1" onerror="this.onerror=null;this.remove()"></script>
+  <script src="https://www-infinity4.github.io/Control-Phi/control-phi.js?v=20260914-guidecards1" onerror="this.onerror=null;this.src='https://www-infinity4.github.io/News-Phi/control-phi.js'"></script>
   <script>
     (function omniRemoteFallback(){
-      const ROOT='https://www-infinity4.github.io/';
-      const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
-      const menu=document.querySelector('details[data-channel-menu]');
-      const nav=menu?.querySelector('nav');
-      if(!menu||!nav)return;
-      let lastSignature='';
+      const ROOT='https://www-infinity4.github.io/',RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
+      const menu=document.querySelector('details[data-channel-menu]'),nav=menu?.querySelector('nav');if(!menu||!nav)return;
       const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      function render(channels){
-        const signature=JSON.stringify(channels.map(item=>[item.name,item.path]));
-        if(signature===lastSignature)return;
-        lastSignature=signature;
-        nav.innerHTML=channels.map(item=>{
-          const path=encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/');
-          return `<a href="${ROOT}${path}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`;
-        }).join('');
-        menu.dataset.controlPhi='connected';
-      }
-      async function loadRegistry(){
-        const sources=[`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,`${RAW}?_remote=${Date.now()}`];
-        for(const source of sources){
-          try{
-            const response=await fetch(source,{cache:'no-store'});
-            if(!response.ok)continue;
-            const data=await response.json();
-            const channels=Array.isArray(data?.channels)?data.channels:[];
-            if(channels.length)return channels;
-          }catch(_){ }
-        }
-        return Array.isArray(window.INFINITY_CHANNELS)?window.INFINITY_CHANNELS:[];
-      }
       async function refresh(){
-        const channels=await loadRegistry();
-        if(channels.length)render(channels);
-        else if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">No channel list is available.</span>';
+        for(const source of [`${ROOT}Control-Phi/channels.json?_remote=${Date.now()}`,`${RAW}?_remote=${Date.now()}`]){try{const response=await fetch(source,{cache:'no-store'});if(!response.ok)continue;const data=await response.json();if(!Array.isArray(data.channels)||!data.channels.length)continue;nav.innerHTML=data.channels.map(item=>`<a href="${ROOT}${encodeURIComponent(String(item.path||'')).replace(/%2F/gi,'/')}/" data-name="${esc(String(item.name||'').toLowerCase())}">${esc(item.name||item.path)}</a>`).join('');menu.dataset.controlPhi='connected';return}catch(_){}}
+        if(!nav.querySelector('a'))nav.innerHTML='<span class="remote-error">Channel list unavailable.</span>';
       }
-      refresh();
-      window.addEventListener('focus',refresh);
-      document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-      setInterval(refresh,60000);
+      refresh();window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});setInterval(refresh,60000);
     })();
   </script>
-  <script src="app.js?v=20260914-guide2"></script>
+  <script src="app.js?v=20260914-omnifix3"></script>
   <script src="news-phi-bridge.js?v=20260913-newsphi1"></script>
 </body>
 </html>
