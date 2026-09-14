@@ -262,7 +262,13 @@
     const state=selected?(states.get(selected.slug)||{}):{},title=state.title||selected?.name||'Omni TV';
     const payload={title:selected?title+' · Omni TV':'Omni TV — Live Network Surfer',text:selected?(selected.type==='website'?'Browsing ':'Watching ')+title+' from '+selected.name+' inside Omni TV.':'Flip through the Infinity network live on one page.',url:location.href};
     try{
-      if(navigator.share){await navigator.share(payload);els.status.textContent='Shared. News Phi received this completed share.'}else{await navigator.clipboard.writeText(payload.url);els.status.textContent='Omni TV link copied.'}
+      const method=navigator.share?'web_share_api':'clipboard_share';
+      if(navigator.share)await navigator.share(payload);else await navigator.clipboard.writeText(payload.url);
+      const credit=window.ControlPhi?.ensureShareCredit?.(payload.url,method);
+      window.ControlPhi?.refreshWallet?.();
+      if(credit?.awarded)els.status.textContent='Shared · 1 StarCoin earned!';
+      else if(credit?.progressToNextCoin!=null)els.status.textContent=`Shared · ${credit.progressToNextCoin}/10 ⭐`;
+      else els.status.textContent=navigator.share?'Shared. News Phi received this completed share.':'Omni TV link copied.';
       if(selected){const old=metric(selected.slug);saveMetric(selected.slug,{shares:old.shares+1,lastViewed:Date.now()});paintCard(selected.slug);applyView()}
     }catch(e){if(e?.name!=='AbortError')els.status.textContent='Share did not complete.'}
   }
