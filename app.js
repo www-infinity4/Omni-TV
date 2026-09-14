@@ -3,7 +3,7 @@
 
   const ROOT="https://www-infinity4.github.io/";
   const RAW_CHANNELS="https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json";
-  const NON_TV=new Set(["News-Phi","Control-Phi","Omni-TV"]);
+  const NON_TV=new Set(["News-Phi","Control-Phi","Omni-TV","Hydrogen-Digital-TV"]);
   const $=id=>document.getElementById(id);
   const els={
     shell:$("screenShell"),frame:$("stationFrame"),grid:$("channelGrid"),clock:$("clock"),networkState:$("networkState"),
@@ -129,13 +129,19 @@
 
   function liveTitle(doc){
     const selectors=[
-      "#nowTitle","[data-now-playing]","#programTitle",".now-title",
-      ".guide-row.current strong","[aria-current='true'] strong",".current-program strong",
+      "[data-now-playing]","#programTitle","#nowTitle",
+      "[aria-current='true'] [data-program-title]",
+      ".guide-row.current .program-title",
+      ".current-program [data-program-title]",
       "#stationCard:not([hidden]) #stationCardTitle"
     ];
     for(const selector of selectors){
-      const text=clean(doc.querySelector(selector)?.textContent);
-      if(text&&!/loading|choose|please wait|tuning|joining|station break/i.test(text))return text;
+      const node=doc.querySelector(selector);
+      const text=clean(node?.dataset?.programTitle||node?.textContent);
+      if(!text)continue;
+      if(/loading|choose|please wait|tuning|joining|station break|live network|what.?s on|tv guide/i.test(text))continue;
+      if(text.length>180)continue;
+      return text;
     }
     return "";
   }
@@ -229,7 +235,7 @@
   function captureState(channel,doc,baseUrl=""){
     if(!channel||!doc?.body)return null;
     const previous=liveState.get(channel.slug)||{};
-    const title=liveTitle(doc)||previous.title||"";
+    const title=liveTitle(doc);
     const image=programArt(doc,baseUrl)||previous.image||"";
     const meta=liveMeta(doc)||previous.meta||"";
     const next={...previous,title,image,meta,checked:true,checkedAt:Date.now()};
