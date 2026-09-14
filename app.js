@@ -80,16 +80,26 @@
   function cardHTML(channel,index){
     const state=liveState.get(channel.slug)||{};
     const title=state.title||(state.checked?"Program title unavailable":"Checking what’s on…");
-    const art=state.image||"";
     const meta=state.meta||(state.checked?`Live on ${channel.name}`:"Reading station schedule…");
     const stateAttr=state.title?"live":"checking";
-    return `<button class="channel-card" type="button" data-index="${index}" data-search="${esc((channel.name+" "+title).toLowerCase())}" style="--art:${art?`url('${art.replace(/'/g,"%27")}')`:"none"}" aria-current="${selected&&selected.slug===channel.slug?"true":"false"}"><span class="channel-top"><span class="channel-name">${esc(channel.name)}</span><span class="live-badge">LIVE</span></span><strong class="program-title" data-state="${stateAttr}">${esc(title)}</strong><span class="program-meta">${esc(meta)}</span></button>`;
+    return `<button class="channel-card" type="button" data-index="${index}" data-search="${esc((channel.name+" "+title).toLowerCase())}" aria-current="${selected&&selected.slug===channel.slug?"true":"false"}"><span class="channel-top"><span class="channel-name">${esc(channel.name)}</span><span class="live-badge">LIVE</span></span><strong class="program-title" data-state="${stateAttr}">${esc(title)}</strong><span class="program-meta">${esc(meta)}</span></button>`;
+  }
+
+  function wireCard(button,index){
+    const channel=channels[index];
+    const art=liveState.get(channel?.slug)?.image||"";
+    try{
+      const url=new URL(art,location.href);
+      if(/^https?:$/.test(url.protocol))button.style.setProperty("--art",`url(${JSON.stringify(url.href)})`);
+      else button.style.setProperty("--art","none");
+    }catch(_){button.style.setProperty("--art","none")}
+    button.addEventListener("click",()=>selectChannel(index));
   }
 
   function renderGrid(){
     if(!els.grid)return;
     els.grid.innerHTML=channels.map(cardHTML).join("");
-    els.grid.querySelectorAll(".channel-card").forEach(button=>button.addEventListener("click",()=>selectChannel(Number(button.dataset.index))));
+    els.grid.querySelectorAll(".channel-card").forEach(button=>wireCard(button,Number(button.dataset.index)));
     applyFilter();
     els.networkState.textContent=channels.length?`${channels.length} LIVE CHANNELS`:"CHANNEL REGISTRY OFFLINE";
   }
@@ -102,7 +112,7 @@
     const holder=document.createElement("div");
     holder.innerHTML=cardHTML(channels[index],index);
     const fresh=holder.firstElementChild;
-    fresh.addEventListener("click",()=>selectChannel(index));
+    wireCard(fresh,index);
     old.replaceWith(fresh);
     applyFilter();
   }
@@ -124,7 +134,9 @@
       const match=String(raw).match(/url\(["']?([^"')]+)["']?\)/i);
       if(match?.[1])return new URL(match[1],baseUrl||location.href).href;
     }catch(_){ }
-    return pageImage(doc,baseUrl);
+    // A page/social image describes the channel, not necessarily the named
+    // program. Only explicit current-program artwork belongs on this card.
+    return "";
   }
 
   function liveTitle(doc){
@@ -236,8 +248,9 @@
     if(!channel||!doc?.body)return null;
     const previous=liveState.get(channel.slug)||{};
     const title=liveTitle(doc);
-    const image=programArt(doc,baseUrl)||previous.image||"";
-    const meta=liveMeta(doc)||previous.meta||"";
+    const sameProgram=!!title&&title===previous.title;
+    const image=programArt(doc,baseUrl)||(sameProgram?previous.image:"")||"";
+    const meta=liveMeta(doc)||(sameProgram?previous.meta:"")||"";
     const next={...previous,title,image,meta,checked:true,checkedAt:Date.now()};
     liveState.set(channel.slug,next);
     updateCard(channel.slug);
