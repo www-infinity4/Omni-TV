@@ -1,7 +1,7 @@
 (function omniControlNetworkRemote(){
   'use strict';
   if(window.__OMNI_CONTROL_REMOTE__)return;
-  window.__OMNI_CONTROL_REMOTE__='2026-09-14.2';
+  window.__OMNI_CONTROL_REMOTE__='2026-09-14.3';
 
   const ROOT='https://www-infinity4.github.io/';
   const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
@@ -17,6 +17,7 @@
   const esc=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const hrefFor=item=>item.url||ROOT+encodeURIComponent(clean(item.path)).replace(/%2F/gi,'/')+'/';
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
+  const setText=(el,value)=>{if(!el)return;const next=String(value);if(el.textContent!==next)el.textContent=next};
 
   function walletState(){
     const session=read(WALLET_SESSION_KEY,null);
@@ -30,17 +31,18 @@
 
   function syncWalletUI(){
     const state=walletState();
-    document.querySelectorAll('[data-omni-wallet-balance]').forEach(el=>el.textContent=`${state.balance.toFixed(1)} ⭐`);
-    document.querySelectorAll('[data-omni-wallet-progress]').forEach(el=>el.textContent=`${state.progress}/10`);
-    document.querySelectorAll('[data-control-phi-wallet-balance]').forEach(el=>el.textContent=state.balance.toFixed(1));
-    document.querySelectorAll('[data-control-phi-wallet-menu-balance]').forEach(el=>el.textContent=`${state.balance.toFixed(1)} ⭐`);
-    document.querySelectorAll('[data-control-phi-wallet-progress],[data-control-phi-wallet-menu-progress]').forEach(el=>el.textContent=`${state.progress}/10`);
+    const balanceText=state.balance.toFixed(1);
+    const balanceStar=`${balanceText} ⭐`;
+    const progressText=`${state.progress}/10`;
+    document.querySelectorAll('[data-omni-wallet-balance]').forEach(el=>setText(el,balanceStar));
+    document.querySelectorAll('[data-omni-wallet-progress]').forEach(el=>setText(el,progressText));
+    document.querySelectorAll('[data-control-phi-wallet-balance]').forEach(el=>setText(el,balanceText));
+    document.querySelectorAll('[data-control-phi-wallet-menu-balance]').forEach(el=>setText(el,balanceStar));
+    document.querySelectorAll('[data-control-phi-wallet-progress],[data-control-phi-wallet-menu-progress]').forEach(el=>setText(el,progressText));
     const shared=document.getElementById('controlPhiWalletButton');
     if(shared){
-      const strong=shared.querySelector('strong');
-      const small=shared.querySelector('small');
-      if(strong)strong.textContent=state.balance.toFixed(1);
-      if(small)small.textContent=`${state.progress}/10`;
+      setText(shared.querySelector('strong'),balanceText);
+      setText(shared.querySelector('small'),progressText);
     }
     return state;
   }
@@ -50,7 +52,7 @@
     const shared=document.getElementById('controlPhiWalletButton');
     if(shared){shared.click();setTimeout(syncWalletUI,0);return}
     const status=document.querySelector(`#${PANEL_ID} .oc-status`);
-    if(status)status.textContent='StarCoin wallet is loading. Your confirmed share credits are still saved.';
+    setText(status,'StarCoin wallet is loading. Your confirmed share credits are still saved.');
   }
 
   function installWalletSync(){
@@ -61,11 +63,6 @@
     window.addEventListener('starquest:share-progress',refresh);
     window.addEventListener('storage',refresh);
     document.addEventListener('click',event=>{if(event.target?.closest?.('#controlPhiWalletButton,#controlPhiWalletMenuButton,#omniControlWallet'))refresh()});
-    if(document.body){
-      const observer=new MutationObserver(()=>syncWalletUI());
-      observer.observe(document.body,{childList:true,subtree:true});
-      window.__OMNI_WALLET_OBSERVER__=observer;
-    }
     syncWalletUI();
   }
 
@@ -128,7 +125,7 @@
   function render(data){
     const shell=createShell();wire(shell);const links=shell.panel.querySelector('.oc-links'),status=shell.panel.querySelector('.oc-status');const channels=Array.isArray(data?.channels)?data.channels:[];
     links.innerHTML=channels.map(item=>{const genres=Array.isArray(item.genres)?item.genres.join(' '):'';const type=clean(item.type||'tv');const search=esc([item.name,item.path,type,genres].join(' ').toLowerCase());return '<a href="'+esc(hrefFor(item))+'" data-type="'+esc(type)+'" data-search="'+search+'">'+esc(item.name||item.path)+'</a>'}).join('');
-    if(status)status.textContent=channels.length+' destinations · Control Phi registry v'+(data?.version??'?');
+    setText(status,channels.length+' destinations · Control Phi registry v'+(data?.version??'?'));
     hideLegacyMenus();syncWalletUI();
   }
 
@@ -140,7 +137,7 @@
 
   async function refresh(){
     try{const data=await getRegistry();render(data);window.dispatchEvent(new CustomEvent('omnicontrol:ready',{detail:{count:data.channels.length,version:data.version??null}}))}
-    catch(_){const shell=createShell();wire(shell);const status=shell.panel.querySelector('.oc-status');if(status)status.textContent='Registry temporarily unavailable. Core Infinity tools and saved StarCoin wallet remain available.'}
+    catch(_){const shell=createShell();wire(shell);setText(shell.panel.querySelector('.oc-status'),'Registry temporarily unavailable. Core Infinity tools and saved StarCoin wallet remain available.')}
   }
 
   function mount(){
