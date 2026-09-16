@@ -1,11 +1,12 @@
 (function omniControlNetworkRemote(){
   'use strict';
   if(window.__OMNI_CONTROL_REMOTE__)return;
-  window.__OMNI_CONTROL_REMOTE__='2026-09-14.3';
+  window.__OMNI_CONTROL_REMOTE__='2026-09-16.1';
 
   const ROOT='https://www-infinity4.github.io/';
   const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
   const PAGES=ROOT+'Control-Phi/channels.json';
+  const SHARE_CONTRACT_URL=ROOT+'Omni-TV/channel-share-contract.js?v=20260916-share1';
   const STYLE_ID='omniControlNetworkStyle';
   const BUTTON_ID='omniControlButton';
   const PANEL_ID='omniControlPanel';
@@ -18,6 +19,13 @@
   const hrefFor=item=>item.url||ROOT+encodeURIComponent(clean(item.path)).replace(/%2F/gi,'/')+'/';
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
   const setText=(el,value)=>{if(!el)return;const next=String(value);if(el.textContent!==next)el.textContent=next};
+
+  function loadShareContract(){
+    if(window.__INFINITY_CHANNEL_SHARE_CONTRACT__||document.querySelector('script[data-omni-share-contract]'))return;
+    const script=document.createElement('script');
+    script.src=SHARE_CONTRACT_URL;script.async=false;script.dataset.omniShareContract='1';
+    (document.head||document.documentElement).appendChild(script);
+  }
 
   function walletState(){
     const session=read(WALLET_SESSION_KEY,null);
@@ -142,6 +150,7 @@
 
   function mount(){
     if(!document.body)return;
+    loadShareContract();
     installWalletSync();hideLegacyMenus();refresh();
     window.addEventListener('focus',refresh);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
