@@ -1,7 +1,7 @@
 (function channelShareContract(){
   'use strict';
   if(window.__INFINITY_CHANNEL_SHARE_CONTRACT__)return;
-  window.__INFINITY_CHANNEL_SHARE_CONTRACT__='2026-09-16.1';
+  window.__INFINITY_CHANNEL_SHARE_CONTRACT__='2026-09-16.2';
 
   const GUEST_KEY='starquest_guest_profile_v1';
   const SESSION_KEY='starquest_session';
@@ -22,6 +22,7 @@
   let nativeShareConfirmedUntil=0;
   let nativeShareSerial=0;
   let consumedShareSerial=0;
+  let nativeShareBaseline=0;
 
   function walletStore(){
     const session=read(SESSION_KEY,null);
@@ -30,6 +31,8 @@
     const profile=signedIn||read(GUEST_KEY,{key:'__guest__',username:'Guest',tokens:0,shareCount:0,pendingShareCredits:0,shareEvents:[],ledger:[]});
     return{session,users,signedIn:!!signedIn,profile};
   }
+
+  function walletShareCount(){return Math.max(0,Number(walletStore().profile.shareCount)||0);}
 
   function saveStore(store){
     if(store.signedIn&&store.session&&store.session.key){
@@ -40,7 +43,7 @@
 
   function credit(count,reference,source){
     count=Math.max(0,Math.floor(Number(count)||0));
-    if(!count)return{awarded:0,progressToNextCoin:walletStore().profile.pendingShareCredits||0,balance:walletStore().profile.tokens||0};
+    if(!count){const p=walletStore().profile;return{awarded:0,progressToNextCoin:Math.max(0,Number(p.pendingShareCredits)||0),balance:Math.max(0,Number(p.tokens)||0),shareCount:Math.max(0,Number(p.shareCount)||0)}}
     const store=walletStore(),profile=store.profile,now=Date.now();
     profile.tokens=Math.max(0,Number(profile.tokens)||0);
     profile.shareCount=Math.max(0,Number(profile.shareCount)||0)+count;
@@ -64,15 +67,30 @@
   function refreshStatus(detail){
     const progress=Math.max(0,Number(detail&&detail.progressToNextCoin)||0);
     const balance=Math.max(0,Number(detail&&detail.balance)||0);
-    const text=detail&&detail.awarded?`Shared · 1 StarCoin completed!`:`Shared · StarCoin progress ${progress}/10`;
+    const text=detail&&detail.awarded?'Shared · 1 StarCoin completed!':`Shared · StarCoin progress ${progress}/10`;
     ['shareStatus','share-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});
     document.querySelectorAll('[data-channel-share-status]').forEach(el=>el.textContent=text);
     document.querySelectorAll('[data-omni-wallet-balance]').forEach(el=>el.textContent=`${(balance+progress/10).toFixed(1)} ⭐`);
     document.querySelectorAll('[data-omni-wallet-progress]').forEach(el=>el.textContent=`${progress}/10`);
   }
 
-  function confirmationAvailable(){return Date.now()<=nativeShareConfirmedUntil&&nativeShareSerial>consumedShareSerial;}
-  function consumeConfirmation(){if(!confirmationAvailable())return false;consumedShareSerial=nativeShareSerial;nativeShareConfirmedUntil=0;return true;}
+  function confirmationAvailable(serial=nativeShareSerial){return Date.now()<=nativeShareConfirmedUntil&&serial>consumedShareSerial&&serial===nativeShareSerial;}
+  function consumeConfirmation(serial=nativeShareSerial){if(!confirmationAvailable(serial))return false;consumedShareSerial=Math.max(consumedShareSerial,serial);nativeShareConfirmedUntil=0;return true;}
+
+  function creditConfirmedShare(source,reference,serial=nativeShareSerial){
+    if(!confirmationAvailable(serial))return null;
+    if(walletShareCount()>nativeShareBaseline){consumeConfirmation(serial);return null;}
+    if(!consumeConfirmation(serial))return null;
+    return credit(1,reference||location.href,source||'native-share');
+  }
+
+  function reconcileNativeShare(serial,baseline,reference){
+    setTimeout(()=>{
+      if(serial<=consumedShareSerial||serial!==nativeShareSerial)return;
+      if(walletShareCount()>baseline){consumeConfirmation(serial);return;}
+      creditConfirmedShare('native-share-auto',reference,serial);
+    },800);
+  }
 
   function wrapNativeShare(){
     if(typeof navigator.share!=='function'||navigator.share.__infinityChannelWrapped)return;
@@ -80,7 +98,9 @@
     const wrapped=async function(payload){
       const result=await native(payload);
       nativeShareSerial+=1;
+      nativeShareBaseline=walletShareCount();
       nativeShareConfirmedUntil=Date.now()+30000;
+      reconcileNativeShare(nativeShareSerial,nativeShareBaseline,payload&&payload.url);
       return result;
     };
     wrapped.__infinityChannelWrapped=true;
@@ -95,18 +115,16 @@
     let isShare=false;
     if(key===LEGACY_PROGRESS_KEY)isShare=(nextNum===oldNum+1)||(oldNum>=9&&nextNum===0);
     if(key===NICK_KEY)isShare=nextNum===oldNum+1;
-    if(!isShare||!consumeConfirmation())return;
-    credit(1,location.href,key===NICK_KEY?'nickelodeon-legacy-share':'legacy-channel-share');
+    if(!isShare)return;
+    creditConfirmedShare(key===NICK_KEY?'nickelodeon-legacy-share':'legacy-channel-share',location.href);
   }
 
   function maybeMirrorCommunity(key,value){
     if(!String(key).startsWith('infinity_site_share_pending_v1:'))return;
     let record=null;try{record=JSON.parse(value)}catch{}
     const method=clean(record&&record.method);
-    const nativeConfirmed=method==='native-share'&&consumeConfirmation();
-    const userConfirmed=method==='user-confirmed-link-share';
-    if(!nativeConfirmed&&!userConfirmed)return;
-    credit(1,location.href,userConfirmed?'user-confirmed-link-share':'native-share');
+    if(method==='native-share')creditConfirmedShare('native-share',location.href);
+    else if(method==='user-confirmed-link-share')credit(1,location.href,'user-confirmed-link-share');
   }
 
   function wrapStorage(){
@@ -127,7 +145,6 @@
 
   function migrateLegacyRemainders(){
     try{
-      if(localStorage.getItem(CONTRACT_MIGRATION_KEY)==='1')return;
       if(localStorage.getItem(LEGACY_MIGRATION_KEY)!=='1'){
         const legacy=Math.min(9,Math.max(0,Number(localStorage.getItem(LEGACY_PROGRESS_KEY))||0));
         if(legacy)credit(legacy,location.href,'legacy-progress-recovery');
@@ -138,8 +155,14 @@
         if(nick)credit(nick,location.href,'nickelodeon-share-recovery');
         originalSet.call(localStorage,NICK_MIGRATION_KEY,'1');
       }
-      originalSet.call(localStorage,CONTRACT_MIGRATION_KEY,'1');
+      originalSet.call(localStorage,`${CONTRACT_MIGRATION_KEY}:${currentPath}`,'1');
     }catch{}
+  }
+
+  function mirrorLegacyEvent(event){
+    if(!confirmationAvailable())return;
+    const detail=event&&event.detail||{};
+    creditConfirmedShare(event.type==='infinity:share-credit'?'legacy-share-credit-event':'legacy-share-event',detail.url||location.href);
   }
 
   async function canonicalShare(){
@@ -152,8 +175,7 @@
     }
     try{
       await navigator.share(payload);
-      consumeConfirmation();
-      credit(1,payload.url,'omni-control-share');
+      creditConfirmedShare('omni-control-share',payload.url);
     }catch(error){if(!error||error.name!=='AbortError'){if(status)status.textContent='Share did not complete.';}}
   }
 
@@ -175,10 +197,12 @@
   migrateLegacyRemainders();
   wrapStorage();
   installOmniShareButton();
+  window.addEventListener('infinity:share',mirrorLegacyEvent);
+  window.addEventListener('infinity:share-credit',mirrorLegacyEvent);
   window.addEventListener('omnicontrol:ready',installOmniShareButton);
   const observer=new MutationObserver(()=>{if(installOmniShareButton())observer.disconnect()});
   if(document.documentElement)observer.observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(()=>observer.disconnect(),15000);
 
-  window.InfinityChannelShareContract={version:'2026-09-16.1',credit,share:canonicalShare,channel:currentPath};
+  window.InfinityChannelShareContract={version:'2026-09-16.2',credit,share:canonicalShare,channel:currentPath};
 })();
