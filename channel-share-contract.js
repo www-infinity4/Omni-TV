@@ -1,7 +1,7 @@
 (function channelShareContract(){
   'use strict';
   if(window.__INFINITY_CHANNEL_SHARE_CONTRACT__)return;
-  window.__INFINITY_CHANNEL_SHARE_CONTRACT__='2026-09-16.2';
+  window.__INFINITY_CHANNEL_SHARE_CONTRACT__='2026-10-08.1';
 
   const GUEST_KEY='starquest_guest_profile_v1';
   const SESSION_KEY='starquest_session';
@@ -12,7 +12,8 @@
   const NICK_MIGRATION_KEY='infinity_nick_share_wallet_migrated_v1';
   const CONTRACT_MIGRATION_KEY='infinity_channel_share_contract_migrated_v1';
   const CHANNEL_PATHS=new Set(['Hermit-TV','Star-Launcher','HBO','Starz','Cinemax','Showtime','Encore','Cartoon-Network','WGN','TNT','NBC','FOX','FX','Nickelodeon','FSN','ESPN','MTV','VH1','AMC','Disney','USA','Comedy-Central','BET','Discovery','Nintendo-TV','Chiller','TBS','ABC','CBS','PBS','History-Channel','CNN','Trump-TV','ShopLC','Ozzy-TV','CCR-TV','Motor-TV','Physics-TV','Adventure-TV','Trigger-TV','Time-Surfers','Syncord','Astraflix','Vintech','Flix-Blender','Abstractia-','Animasync','SeekSync']);
-  const currentPath=(location.pathname.split('/').filter(Boolean)[0]||'');
+  const pathParts=location.pathname.split('/').filter(Boolean);
+  const currentPath=(pathParts[0]==='channels'?pathParts[1]:pathParts[0])||'';
   if(!CHANNEL_PATHS.has(currentPath))return;
 
   const clean=value=>String(value==null?'':value).replace(/\s+/g,' ').trim();
@@ -41,8 +42,46 @@
     }else originalSet.call(localStorage,GUEST_KEY,JSON.stringify(store.profile));
   }
 
+  const pendingConfirmedShares=[];
+  let loadingSharedWallet=false;
+  function flushConfirmedShares(){
+    const creditShare=window.ControlPhi?.ensureShareCredit;
+    if(typeof creditShare!=='function')return false;
+    while(pendingConfirmedShares.length){
+      const pending=pendingConfirmedShares.shift();
+      const result=creditShare(pending.reference,pending.source);
+      refreshStatus({...result,source:'control-phi-channel'});
+    }
+    return true;
+  }
+  function ensureSharedWallet(){
+    if(flushConfirmedShares())return;
+    if(loadingSharedWallet)return;
+    loadingSharedWallet=true;
+    const script=document.createElement('script');
+    script.src='https://quantaphi.org/Control-Phi/control-phi.js?v=20261008-channelwallet';
+    script.dataset.controlPhiWalletOnly='true';
+    script.onload=()=>{loadingSharedWallet=false;flushConfirmedShares()};
+    script.onerror=()=>{loadingSharedWallet=false;refreshStatus({pending:true})};
+    (document.head||document.documentElement).appendChild(script);
+  }
+
   function credit(count,reference,source){
     count=Math.max(0,Math.floor(Number(count)||0));
+    const legacyRecovery=/^(?:legacy-progress-recovery|nickelodeon-share-recovery)$/.test(source||'');
+    if(!legacyRecovery&&count){
+      // All new channel rewards go through Control Phi's cloud receipt queue.
+      // Never mint a separate local-only StarCoin on an Omni channel.
+      if(typeof window.ControlPhi?.ensureShareCredit==='function'){
+        const result=window.ControlPhi.ensureShareCredit(reference||location.href,source||'omni-channel-share');
+        refreshStatus(result);
+        return result;
+      }
+      for(let i=0;i<count;i++)pendingConfirmedShares.push({reference:reference||location.href,source:source||'omni-channel-share'});
+      refreshStatus({pending:true});
+      ensureSharedWallet();
+      return {pending:true,awarded:0};
+    }
     if(!count){const p=walletStore().profile;return{awarded:0,progressToNextCoin:Math.max(0,Number(p.pendingShareCredits)||0),balance:Math.max(0,Number(p.tokens)||0),shareCount:Math.max(0,Number(p.shareCount)||0)}}
     const store=walletStore(),profile=store.profile,now=Date.now();
     profile.tokens=Math.max(0,Number(profile.tokens)||0);
@@ -67,7 +106,7 @@
   function refreshStatus(detail){
     const progress=Math.max(0,Number(detail&&detail.progressToNextCoin)||0);
     const balance=Math.max(0,Number(detail&&detail.balance)||0);
-    const text=detail&&detail.awarded?'Shared · 1 StarCoin completed!':`Shared · StarCoin progress ${progress}/10`;
+    const text=detail?.pending?'Connecting to the shared StarCoin ledger…':detail&&detail.awarded?'Shared · 1 StarCoin completed!':`Shared · StarCoin progress ${progress}/10`;
     ['shareStatus','share-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});
     document.querySelectorAll('[data-channel-share-status]').forEach(el=>el.textContent=text);
     document.querySelectorAll('[data-omni-wallet-balance]').forEach(el=>el.textContent=`${(balance+progress/10).toFixed(1)} ⭐`);
@@ -204,5 +243,5 @@
   if(document.documentElement)observer.observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(()=>observer.disconnect(),15000);
 
-  window.InfinityChannelShareContract={version:'2026-09-16.2',credit,share:canonicalShare,channel:currentPath};
+  window.InfinityChannelShareContract={version:'2026-10-08.1',credit,share:canonicalShare,channel:currentPath};
 })();
