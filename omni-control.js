@@ -3,7 +3,7 @@
   if(window.__OMNI_CONTROL_REMOTE__)return;
   window.__OMNI_CONTROL_REMOTE__='2026-09-16.1';
 
-  const ROOT='https://www-infinity4.github.io/';
+  const ROOT='https://quantaphi.org/';
   const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
   const PAGES=ROOT+'Control-Phi/channels.json';
   const SHARE_CONTRACT_URL=ROOT+'Omni-TV/channel-share-contract.js?v=20260916-share1';
@@ -16,7 +16,7 @@
 
   const clean=value=>String(value??'').replace(/\s+/g,' ').trim();
   const esc=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const hrefFor=item=>item.url||ROOT+encodeURIComponent(clean(item.path)).replace(/%2F/gi,'/')+'/';
+  const hrefFor=item=>item.url||ROOT+(clean(item.path)==='C13b0/phi'?'phi':encodeURIComponent(clean(item.path)).replace(/%2F/gi,'/'))+'/';
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
   const setText=(el,value)=>{if(!el)return;const next=String(value);if(el.textContent!==next)el.textContent=next};
 
