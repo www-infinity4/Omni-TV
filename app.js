@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const ROOT='https://quantaphi.org/';
+  const ROOT='https://www-infinity4.github.io/';
   const REGISTRY=ROOT+'Control-Phi/channels.json';
   const RAW='https://raw.githubusercontent.com/www-infinity4/Control-Phi/main/channels.json';
   const NON_TV=new Set(['News-Phi','Control-Phi','Omni-TV','Hydrogen-Digital-TV']);
