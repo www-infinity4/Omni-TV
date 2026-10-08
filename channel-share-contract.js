@@ -104,6 +104,10 @@
   }
 
   function refreshStatus(detail){
+    if(detail?.pending){
+      document.querySelectorAll('[data-channel-share-status]').forEach(el=>el.textContent='Connecting to the shared StarCoin ledger…');
+      return;
+    }
     const progress=Math.max(0,Number(detail&&detail.progressToNextCoin)||0);
     const balance=Math.max(0,Number(detail&&detail.balance)||0);
     const text=detail?.pending?'Connecting to the shared StarCoin ledger…':detail&&detail.awarded?'Shared · 1 StarCoin completed!':`Shared · StarCoin progress ${progress}/10`;
