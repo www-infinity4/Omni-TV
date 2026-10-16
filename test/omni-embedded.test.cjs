@@ -10,6 +10,9 @@ test('Embedded QuantaPhi maps the known station players to same origin',()=>{
  assert.ok(js.includes("location.origin!=='https://quantaphi.org'"));
  for(const path of ['/TV-Database/','/Chiller/','/shoplc/'])assert.ok(js.includes(path));
  assert.match(js,/frameLoadedGeneration/);
+ assert.match(js,/v1\\/now\\/starquest/);
+ assert.match(js,/youtube-nocookie\\.com\\/embed/);
+ assert.match(js,/autoStartedChillerFor/);
  assert.match(js,/Station page opened in Omni TV/);
  assert.doesNotThrow(()=>new Function(js));
 });
