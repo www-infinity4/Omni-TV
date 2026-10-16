@@ -6,3 +6,20 @@
 .channel-top{min-height:24px}.program-title{align-self:end;margin:0 0 4px;max-height:2.2em;-webkit-line-clamp:2;font-size:19px;line-height:1.08}.program-title[data-state="checking"]{align-self:end;font-size:13px;line-height:1.2}.program-meta{margin:0;min-height:15px;max-height:15px;white-space:nowrap;text-overflow:ellipsis;display:block;overflow:hidden}.channel-card::before{will-change:opacity;background-position:center;background-size:cover}.channel-card>*{min-width:0;max-width:100%}
 @media(max-width:760px){.channel-grid{grid-template-columns:1fr 1fr;grid-auto-rows:154px}.channel-card{height:154px;min-height:154px;max-height:154px;padding:12px}.program-title{font-size:16px}}
 @media(max-width:520px){.channel-grid{grid-template-columns:1fr;grid-auto-rows:154px}}
+
+/* Embedded Oracle Octaves channel window: the same Omni remote controls the player. */
+body.omni-embedded{min-height:0;background:#070b13}
+body.omni-embedded .topbar,body.omni-embedded .omni-tools,body.omni-embedded .network,body.omni-embedded footer{display:none!important}
+body.omni-embedded main{width:100%;margin:0;padding:0}
+body.omni-embedded .watch{padding:6px 7px 8px}
+body.omni-embedded .now-head{align-items:center;gap:4px;margin:0 0 8px}
+body.omni-embedded .now-head p{font-size:10px;margin-bottom:2px}
+body.omni-embedded .now-head h1{font:800 17px/1.25 system-ui,sans-serif}
+body.omni-embedded .head-actions,body.omni-embedded #nowMeta{display:none!important}
+body.omni-embedded .screen-shell{aspect-ratio:16/9;min-height:0;border-radius:11px;box-shadow:none}
+body.omni-embedded .surf-controls{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:5px;padding:9px 0 0}
+body.omni-embedded .surf-controls button{padding:0 5px;min-height:45px;font-size:13px;touch-action:manipulation}
+body.omni-embedded #status{grid-column:1/-1;font-size:11px;line-height:1.4}
+body.omni-embedded .tap-live-overlay strong{font-size:clamp(23px,7vw,38px)}
+body.omni-embedded .tap-live-overlay small{font-size:11px}
+@media(max-width:460px){body.omni-embedded .screen-shell{aspect-ratio:16/9}body.omni-embedded .watch{padding:5px}}
