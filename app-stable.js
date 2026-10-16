@@ -7,6 +7,14 @@
   const RATING_KEY='omni:viewer-ratings:v1';
   const CACHE_MS=5*60*1000;
   const SELF_SLUG='omni-tv';
+  const EMBEDDED=new URLSearchParams(location.search).get('embedded')==='1';
+  // In the QuantaPhi card, use the real owner's same-origin gateway for
+  // the three known channels. The original full-page remote is unchanged.
+  function playableLocalUrl(slug,url){
+    if(!EMBEDDED||location.origin!=='https://quantaphi.org')return url;
+    const known={'tv-database':'/TV-Database/','chiller':'/Chiller/','shoplc':'/shoplc/'};
+    return known[String(slug).toLowerCase()]?location.origin+known[String(slug).toLowerCase()]:url;
+  }
   const $=id=>document.getElementById(id);
   const els={
     shell:$('screenShell'),frame:$('stationFrame'),grid:$('channelGrid'),clock:$('clock'),networkState:$('networkState'),
@@ -18,7 +26,7 @@
   const safeUrl=(v,base=location.href)=>{try{const u=new URL(v,base);return /^https?:$/.test(u.protocol)?u.href:''}catch{return ''}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
-  let channels=[],viewChannels=[],selected=null,tuneId=0,stationPoll=0,selectedStartedAt=0;
+  let channels=[],viewChannels=[],selected=null,tuneId=0,stationPoll=0,selectedStartedAt=0,frameLoadedGeneration=-1;
   let activeType='all';
   const states=new Map(),cards=new Map(),probeTokens=new Map(),queued=new Set();
   let probeQueue=[],runningProbes=0,visibleObserver=null;
@@ -43,7 +51,8 @@
     const slug=slugOf(item);if(!slug||slug.toLowerCase()===SELF_SLUG)return null;
     const type=normalizeType(item.type,slug);
     const genres=[...new Set((Array.isArray(item.genres)?item.genres:[]).map(v=>clean(v).toLowerCase()).filter(Boolean))];
-    return{name:clean(item.name||slug),slug,url:safeUrl(item.url||ROOT+slug+'/',ROOT),type,genres,order,globalRating:Number(item.viewerRating??item.rating??0)||0};
+    const url=safeUrl(item.url||ROOT+slug+'/',ROOT);
+    return{name:clean(item.name||slug),slug,url:playableLocalUrl(slug,url),type,genres,order,globalRating:Number(item.viewerRating??item.rating??0)||0};
   }
   function dedupe(list){const seen=new Set();return list.map((item,index)=>normalize(item,index)).filter(Boolean).filter(item=>{const key=item.slug.toLowerCase();if(seen.has(key))return false;seen.add(key);return true})}
   async function getChannels(){
@@ -225,7 +234,15 @@
     return true;
   }
   function ready(generation){
-    if(generation!==tuneId||!selected)return false;const doc=stationDoc();if(!doc?.body)return false;
+    if(generation!==tuneId||!selected)return false;const doc=stationDoc();
+    // The remote must not hang forever on a cross-origin source.
+    if(!doc?.body){
+      if(frameLoadedGeneration!==generation)return false;
+      els.loading.hidden=true;overlay.hidden=true;els.shell.classList.add('station-ready');
+      els.wake.disabled=true;els.wake.textContent='Use station controls';
+      els.status.textContent='Station page opened in Omni TV. Use its own playback button; some providers disallow embedding.';
+      return true;
+    }
     if(selected.type==='website'){
       capture(selected,doc);els.shell.classList.add('station-ready','website-ready');els.loading.hidden=true;overlay.hidden=true;els.wake.disabled=false;els.wake.textContent='Browse';els.status.textContent='Website loaded inside Omni TV.';syncSelected();return true;
     }
@@ -237,6 +254,7 @@
     if(!channel)return;commitSelectedTime();selected=channel;selectedStartedAt=Date.now();
     const old=metric(channel.slug);saveMetric(channel.slug,{tunes:old.tunes+1,lastViewed:Date.now()});
     paintCard(channel.slug);applyView();probeTokens.set(channel.slug,(probeTokens.get(channel.slug)||0)+1);tuneId++;
+    frameLoadedGeneration=-1;
     const generation=tuneId,state=states.get(channel.slug)||{};markSelection();els.idle.hidden=true;els.loading.hidden=false;els.loadingChannel.textContent=(channel.type==='website'?'Loading ':'Tuning ')+channel.name+'…';
     els.shell.classList.remove('station-ready','station-playing','website-ready');overlay.hidden=true;els.channelLabel.textContent=(channel.type==='website'?'WEBSITE · ':'LIVE · ')+channel.name;
     els.nowTitle.textContent=state.title||(channel.type==='website'?channel.name:'Tuning '+channel.name);els.nowMeta.textContent=state.meta||(channel.type==='website'?'Loading the full page inside Omni TV.':'Preparing the live player without leaving Omni TV.');
@@ -281,7 +299,7 @@
     setInterval(refreshVisible,CACHE_MS);
   }
 
-  els.frame.addEventListener('load',()=>{const generation=tuneId;[0,150,500,1000].forEach(ms=>setTimeout(()=>ready(generation),ms))});
+  els.frame.addEventListener('load',()=>{const generation=tuneId;frameLoadedGeneration=generation;[0,150,500,1000].forEach(ms=>setTimeout(()=>ready(generation),ms))});
   overlay.addEventListener('click',wake);els.prev.addEventListener('click',()=>step(-1));els.next.addEventListener('click',()=>step(1));els.wake.addEventListener('click',wake);
   els.open.addEventListener('click',()=>selected&&window.open(selected.url,'_blank','noopener'));els.share.addEventListener('click',share);
   els.search?.addEventListener('input',applyView);els.genre?.addEventListener('change',applyView);els.sort?.addEventListener('change',applyView);
