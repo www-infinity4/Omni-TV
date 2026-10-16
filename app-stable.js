@@ -234,7 +234,9 @@
     return true;
   }
   function ready(generation){
-    if(generation!==tuneId||!selected)return false;const doc=stationDoc();
+    if(generation!==tuneId||!selected)return false;
+    if(EMBEDDED&&selected.slug.toLowerCase()==='tv-database'&&els.frame.src==='about:blank')return false;
+    const doc=stationDoc();
     // The remote must not hang forever on a cross-origin source.
     if(!doc?.body){
       if(frameLoadedGeneration!==generation)return false;
@@ -278,7 +280,7 @@
         .then(p=>{
           if(generation!==tuneId)return;
           const id=String(p?.now?.source?.sourceId||'');
-          if(!p?.ok||!/^[A-Za-z0-9_-]{6,15}$/.test(id))throw Error('no_playable_live_source');
+          if(!p?.ok||!['youtube'].includes(String(p?.now?.source?.provider||'').toLowerCase())||!/^[A-Za-z0-9_-]{6,15}$/.test(id))throw Error('no_playable_live_source');
           const second=Math.max(0,Math.min(86400,Math.floor(Number(p.offsetSeconds)||0)));
           els.channelLabel.textContent='LIVE · STARQUEST';
           els.nowTitle.textContent=clean(p.now.title||'StarQuest live');
