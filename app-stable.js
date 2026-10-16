@@ -26,7 +26,7 @@
   const safeUrl=(v,base=location.href)=>{try{const u=new URL(v,base);return /^https?:$/.test(u.protocol)?u.href:''}catch{return ''}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
-  let channels=[],viewChannels=[],selected=null,tuneId=0,stationPoll=0,selectedStartedAt=0,frameLoadedGeneration=-1;
+  let channels=[],viewChannels=[],selected=null,tuneId=0,stationPoll=0,selectedStartedAt=0,frameLoadedGeneration=-1,autoStartedChillerFor=-1;
   let activeType='all';
   const states=new Map(),cards=new Map(),probeTokens=new Map(),queued=new Set();
   let probeQueue=[],runningProbes=0,visibleObserver=null;
@@ -247,19 +247,47 @@
       capture(selected,doc);els.shell.classList.add('station-ready','website-ready');els.loading.hidden=true;overlay.hidden=true;els.wake.disabled=false;els.wake.textContent='Browse';els.status.textContent='Website loaded inside Omni TV.';syncSelected();return true;
     }
     if(!playerShell(doc)||!isolate(doc))return false;syncSelected();els.shell.classList.add('station-ready');els.shell.classList.remove('website-ready');els.loading.hidden=true;
-    overlay.querySelector('span').textContent='LIVE · '+selected.name;overlay.querySelector('strong').textContent='Tap to start';overlay.querySelector('small').textContent=(states.get(selected.slug)||{}).title||'Join at the current live position';overlay.hidden=false;els.wake.disabled=false;els.wake.textContent='Tap to start';els.status.textContent='';return true;
+    overlay.querySelector('span').textContent='LIVE · '+selected.name;overlay.querySelector('strong').textContent='Tap to start';overlay.querySelector('small').textContent=(states.get(selected.slug)||{}).title||'Join at the current live position';overlay.hidden=false;els.wake.disabled=false;els.wake.textContent='Tap to start';els.status.textContent='';
+    // The outside Oracle screen was the owner's one tap. In embedded mode,
+    // ask Chiller to join the current slot once, then leave the player's
+    // own visible controls available if the browser declines autoplay.
+    if(EMBEDDED&&selected.slug.toLowerCase()==='chiller'&&autoStartedChillerFor!==generation){
+      const enter=enterButton(doc);
+      if(enter){autoStartedChillerFor=generation;enter.click();els.shell.classList.add('station-playing');overlay.hidden=true;els.wake.textContent='On air';els.status.textContent='Chiller is joining live. If playback is blocked, tap Play in the screen.';}
+    }
+    return true;
   }
 
   function selectChannel(channel){
     if(!channel)return;commitSelectedTime();selected=channel;selectedStartedAt=Date.now();
     const old=metric(channel.slug);saveMetric(channel.slug,{tunes:old.tunes+1,lastViewed:Date.now()});
     paintCard(channel.slug);applyView();probeTokens.set(channel.slug,(probeTokens.get(channel.slug)||0)+1);tuneId++;
-    frameLoadedGeneration=-1;
+    frameLoadedGeneration=-1;autoStartedChillerFor=-1;
     const generation=tuneId,state=states.get(channel.slug)||{};markSelection();els.idle.hidden=true;els.loading.hidden=false;els.loadingChannel.textContent=(channel.type==='website'?'Loading ':'Tuning ')+channel.name+'…';
     els.shell.classList.remove('station-ready','station-playing','website-ready');overlay.hidden=true;els.channelLabel.textContent=(channel.type==='website'?'WEBSITE · ':'LIVE · ')+channel.name;
     els.nowTitle.textContent=state.title||(channel.type==='website'?channel.name:'Tuning '+channel.name);els.nowMeta.textContent=state.meta||(channel.type==='website'?'Loading the full page inside Omni TV.':'Preparing the live player without leaving Omni TV.');
     els.open.disabled=false;els.open.textContent=channel.type==='website'?'Open website':'Open station';els.wake.disabled=true;els.wake.textContent=channel.type==='website'?'Loading…':'Tuning…';els.status.textContent='';
-    els.frame.src=channel.url+(channel.url.includes('?')?'&':'?')+(channel.type==='website'?'omni=website':'omni=player')+'&v='+Date.now();history.replaceState(null,'','#'+encodeURIComponent(channel.slug));
+    const stationPage=channel.url+(channel.url.includes('?')?'&':'?')+(channel.type==='website'?'omni=website':'omni=player')+'&v='+Date.now();
+    // StarQuest's old index opens at a sign-in splash, not at a broadcast.
+    // In the embedded Oracle window, use its existing verified live-schedule
+    // API and source-host player. Fall back to the old guide on error.
+    if(EMBEDDED&&channel.slug.toLowerCase()==='tv-database'){
+      els.frame.src='about:blank';
+      fetch('https://tv-database.marvaseater.workers.dev/v1/now/starquest',{cache:'no-store',signal:AbortSignal.timeout(9000)})
+        .then(async r=>{if(!r.ok)throw Error('schedule_'+r.status);return r.json()})
+        .then(p=>{
+          if(generation!==tuneId)return;
+          const id=String(p?.now?.source?.sourceId||'');
+          if(!p?.ok||!/^[A-Za-z0-9_-]{6,15}$/.test(id))throw Error('no_playable_live_source');
+          const second=Math.max(0,Math.min(86400,Math.floor(Number(p.offsetSeconds)||0)));
+          els.channelLabel.textContent='LIVE · STARQUEST';
+          els.nowTitle.textContent=clean(p.now.title||'StarQuest live');
+          els.nowMeta.textContent='StarQuest · Cloudflare live schedule';
+          els.frame.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?autoplay=1&mute=1&playsinline=1&controls=1&start='+second;
+        })
+        .catch(()=>{if(generation!==tuneId)return;els.frame.src=stationPage;els.status.textContent='Live schedule unavailable; showing the original StarQuest guide.';});
+    }else els.frame.src=stationPage;
+    history.replaceState(null,'','#'+encodeURIComponent(channel.slug));
     clearInterval(stationPoll);let tries=0;stationPoll=setInterval(()=>{if(generation!==tuneId){clearInterval(stationPoll);return}tries++;if(ready(generation)){clearInterval(stationPoll);stationPoll=setInterval(syncSelected,2000);return}if(tries>80){clearInterval(stationPoll);els.loading.hidden=true;els.status.textContent=channel.type==='website'?'This website cannot be embedded; Open website still works.':'This station player needs repair; Open station still works.';if(channel.type==='website')els.wake.disabled=false;els.wake.textContent=channel.type==='website'?'Open website':'Player unavailable'}},150);
   }
   function step(delta){
